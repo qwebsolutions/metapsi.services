@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="embedded\Metapsi.ServiceDoc.css" LogicalName="Metapsi.ServiceDoc.css" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Metapsi.Heroicons" Version="0.4.2" />
+	  <PackageReference Include="Metapsi.Shoelace" Version="0.4.2" />
+	  <PackageReference Include="Metapsi.SQLite" Version="0.4.2" />
+	  <PackageReference Include="Metapsi.Web" Version="0.4.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\metapsi\Metapsi.ActiveTable\Metapsi.ActiveTable.csproj" />
+	</ItemGroup>
+
+</Project>
