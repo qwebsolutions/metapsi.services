@@ -148,7 +148,7 @@ public static partial class ServiceDoc
     {
         var tableName = NormalizeTableName(typeof(T).FullName);
         var propertyName = byProperty.PropertyName();
-        await transaction.Connection.ExecuteAsync($"delete from {tableName} where {propertyName}=@value", new { value }, transaction);
+        var deletedCount = await transaction.Connection.ExecuteAsync($"delete from {tableName} where {propertyName}=@value", new { value }, transaction);
     }
 
     public static async Task SaveDocument<T>(this System.Data.Common.DbTransaction transaction, T document)

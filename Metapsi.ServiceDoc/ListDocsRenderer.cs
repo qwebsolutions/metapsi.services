@@ -9,7 +9,8 @@ using System.Collections.Generic;
 using Metapsi.Ui;
 using static Metapsi.Hyperapp.HyperType;
 using System.Linq.Expressions;
-using Metapsi.ActiveTable;
+using Metapsi.Controls;
+using Metapsi.HtmlControls;
 
 namespace Metapsi
 {
@@ -24,7 +25,6 @@ namespace Metapsi
         public ServerModel<T> ServerModel { get; set; } = new();
         public ServiceDoc.ListDocsPage<T> ClientModel { get; set; } = new();
     }
-
 
     public class ListDocsRenderer<T> : HtmlPage<ListDocsPageModel<T>>
     {
@@ -44,7 +44,7 @@ namespace Metapsi
                 new HyperAppNode<ServiceDoc.ListDocsPage<T>>()
                 {
                     Model = dataModel.ClientModel,
-                    Render = (b,model) => OnRender(b, model, dataModel.ServerModel),
+                    Render = (b, model) => OnRender(b, model, dataModel.ServerModel),
                     TakeoverNode = huhNode
                 });
         }
@@ -54,8 +54,6 @@ namespace Metapsi
             b.AddModuleStylesheet();
 
             var rows = b.Get(model, x => x.Documents);
-
-            var columns = b.GetActiveTableCustomColumnSettings<T>(new() { "id", "Id" });
 
             return b.Div(
                 "",
@@ -85,50 +83,71 @@ namespace Metapsi
                 !string.IsNullOrEmpty(serverModel.DescriptionHtml) ? this.DocDescriptionPanel(b, b.Const(serverModel.DescriptionHtml)) : b.VoidNode().As<IVNode>(),
                 this.EditDocumentPopup(b, model, serverModel.IdProperty),
                 this.RemoveDocumentPopup(b, serverModel.IdProperty),
-                b.ActiveTable(
-                    b =>
+                b.DataGrid<T>(b =>
+                {
+                    b.OnTable(b =>
                     {
-
-                        b.SetDynamic(b.Props, new DynamicProperty<HyperType.Action<ServiceDoc.ListDocsPage<T>, object>>(
-                            "oncell-update"),
-                            b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<object> @event) =>
+                        b.FillFrom(
+                            rows,
+                            exceptColumns: new()
                             {
-                                var detail = b.GetDynamic(@event, new DynamicProperty<object>("detail"));
-                                var updateType = b.GetDynamic(detail, new DynamicProperty<string>("updateType"));
-                                b.If(
-                                    b.AreEqual(updateType, b.Const("Removed")),
-                                    b => b.Log(updateType, detail));
-                                return b.Clone(model);
+                                "Id"
+                            });
+
+                        b.SetData((b, data) =>
+                        {
+                            var autoColumns = b.Get(data, x => x.Columns);
+                            var outColumns = b.NewCollection<ColumnData>();
+                            b.Push(outColumns, b.NewObj<ColumnData>(b =>
+                            {
+                                b.Set(x => x.Name, "__actions__");
+                                b.Set(x => x.TypeName, typeof(string).Name);
                             }));
-                        
-                        b.SetDynamic(b.Props, Html.id, b.Const("entities-table"));
 
-                        var tableStyle = b.NewObj<DynamicObject>();
-                        b.SetDynamic(tableStyle, DynamicProperty.String("width"), b.Const("100%"));
+                            b.PushRange(outColumns, autoColumns);
 
-                        b.SetDynamic(b.Props, new DynamicProperty<DynamicObject>("tableStyle"), tableStyle);
+                            b.Set(data, x => x.Columns, outColumns);
+                        });
 
-                        b.SetActiveTableData(b.Get(model, x => x.Documents), new() { "id", "Id" });
-                        b.HideAddNewRow();
-                        b.HideAddNewColumn();
-                        b.Set(b.Props, x => x.columnDropdown, b.Const(new ColumnDropdownSettings()
+                        b.Control.HeaderCell.OverrideChild((b, data, previous) =>
                         {
-                            isDeleteAvailable = false,
-                            isInsertLeftAvailable = false,
-                            isInsertRightAvailable = false,
-                            isMoveAvailable = false,
-                        }));
-                        b.Set(b.Props, x => x.rowDropdown, b.Const(new RowDropdownSettings()
+                            return b.If(
+                                b.Get(data, x => x.Name == "__actions__"),
+                                b => b.T(string.Empty),
+                                b => previous(b, data));
+                        });
+
+                        b.Control.TableCell.OverrideChild(
+                            (b, data, baseRenderer) =>
+                            {
+                                return
+                                    b.If(
+                                        b.Get(data, x => x.Column.Name == "__actions__"),
+                                        b =>
+                                        {
+                                            return b.H("div",
+                                                (b, props) =>
+                                                {
+                                                    b.AddClass(props, "flex flex-row items-center gap-2");
+                                                },
+                                                EditDocumentButton(b, b.Get(data, x => x.Row), serverModel.IdProperty),
+                                                DeleteDocumentButton(b, b.Get(data, x => x.Row), serverModel.IdProperty));
+                                        },
+                                        b => baseRenderer(b, data));
+                            });
+
+                        b.Control.TableCell.EditProps((b, props) =>
                         {
-                            isInsertDownAvailable = false,
-                            isInsertUpAvailable = false,
-                            isMoveAvailable = false
-                        }));
-                        //b.Set(b.Props, x => x.isCellTextEditable, false);
-                    }));
+                            b.AddClass(props, "border border-gray-200 p-4");
+                        });
+
+                        b.Control.HeaderCell.EditProps((b, props) =>
+                        {
+                            b.AddClass(props, "border border-gray-200 p-4");
+                        });
+                    });
+                }));
         }
-
-
 
         Var<Func<T, string>> DefineGetId(SyntaxBuilder b, Expression<Func<T, string>> IdProperty)
         {
@@ -224,7 +243,7 @@ namespace Metapsi
             var isNew = b.Get(model, getId, (model, getId) => model.EditDocument == null || !model.Documents.Any(x => getId(x) == getId(model.EditDocument)));
             var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
 
-            var buildContent = (LayoutBuilder b) => 
+            var buildContent = (LayoutBuilder b) =>
             b.Div(
                 "flex flex-col gap-4",
                 b.AutoEditForm(b.GetDataContext(model, x => x.EditDocument)),
@@ -259,7 +278,7 @@ namespace Metapsi
                 },
                 b.Optional(
                     b.HasObject(b.Get(model, x => x.EditDocument)),
-                    b=> b.Call(buildContent)));
+                    b => b.Call(buildContent)));
         }
 
         public Var<IVNode> RemoveDocumentPopup(
@@ -429,12 +448,7 @@ namespace Metapsi
                         (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<List<T>> result) =>
                         {
                             b.Set(model, x => x.Documents, result);
-                            return b.MakeStateWithEffects(
-                                b.Clone(model),
-                                b.MakeEffect<ServiceDoc.ListDocsPage<T>>(b.Def((SyntaxBuilder b,Var<Dispatcher<ServiceDoc.ListDocsPage<T>>> dispatcher) =>
-                                {
-                                    b.UpdateActiveTableData<T>(b.Const("entities-table"), b.Get(model, x => x.Documents));
-                                })));
+                            return b.Clone(model);
                         });
 
                 var onError = b.MakeAction(

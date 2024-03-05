@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\metapsi\Metapsi.ActiveTable\Metapsi.ActiveTable.csproj" />
+	  <ProjectReference Include="..\Metapsi.Controls\Metapsi.Controls.csproj" />
 	</ItemGroup>
 
 </Project>
