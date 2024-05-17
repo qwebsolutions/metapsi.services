@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace Metapsi.ActiveTable.Tests;
 
+[DocDescription("Description here")]
 public class TestEntity
 {
     [DocIndex]
@@ -40,7 +41,7 @@ public class UnitTest1
         var ig = serviceSetup.ApplicationSetup.AddImplementationGroup();
 
         var webServerRefs = serviceSetup.ApplicationSetup.AddWebServer(ig, 5000);
-        webServerRefs.RegisterStaticFiles(typeof(Metapsi.HtmlControls.Control).Assembly);
+        //webServerRefs.RegisterStaticFiles(typeof(Metapsi.HtmlControls.Control).Assembly);
 
         var configurationDb = serviceSetup.GetServiceDataFile("test.db");
         var configurationUrl = await webServerRefs.RegisterDocsUi<TestEntity>(
@@ -48,6 +49,7 @@ public class UnitTest1
             (x) => x.Key,
             createDocument: async (cc) => new TestEntity()
             {
+                Key = Guid.NewGuid().ToString(),
                 Notes = "Manually edited in " + serviceSetup.ServiceName
             });
 

@@ -1,4 +1,5 @@
-﻿using Metapsi.Hyperapp;
+﻿using Metapsi.Html;
+using Metapsi.Hyperapp;
 using Metapsi.Shoelace;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Builder;
@@ -45,11 +46,9 @@ namespace Metapsi
 
             var listUrl = webServer.WebApplication.RegisterDocUiHandlers<T>(idProperty);
 
-            webServer.RegisterRenderer<ListDocsPageModel<T>, ListDocsRenderer<T>>();
-            webServer.RegisterStaticFiles(typeof(SyntaxBuilder).Assembly);
-            webServer.RegisterStaticFiles(typeof(Hyperapp.IVNode).Assembly);
-            webServer.RegisterStaticFiles(typeof(Metapsi.Dom.DomElement).Assembly);
-            webServer.RegisterStaticFiles(typeof(Register).Assembly);
+            webServer.Render<ListDocsPageModel<T>>(Metapsi.ServiceDoc.Render);
+
+            //webServer.RegisterRenderer<ListDocsPageModel<T>, ListDocsRenderer<T>>();
 
             var noActualState = webServer.ApplicationSetup.AddBusinessState(new object());
 
@@ -92,6 +91,15 @@ namespace Metapsi
             webServer.WebApplication.RegisterGetHandler<OverviewHandler, Docs.Overview>();
 
             return WebServer.Url<Docs.Overview>();
+        }
+
+        public static void Render<TModel>(this WebServer.References refs, System.Action<HtmlBuilder, TModel> buildPage)
+        {
+            refs.RegisterPageBuilder<TModel>(model =>
+            {
+                var document = HtmlBuilder.FromDefault(b => buildPage(b, model));
+                return document.ToHtml();
+            });
         }
     }
 
@@ -137,23 +145,24 @@ namespace Metapsi
     {
         public override Var<IVNode> OnRender(LayoutBuilder b, Var<DocsOverviewModel> model)
         {
-            return b.Div(
-                "flex flex-row flex-wrap gap-2",
+            return b.HtmlDiv(
+                b =>
+                {
+                    b.SetClass("flex flex-row flex-wrap gap-2");
+                },
                 b.Map(b.Get(model, x => x.DocServices), (b, service) =>
                 {
-                    return b.H(
-                        "a",
-                        (b, props) =>
+                    return b.HtmlA(
+                        b =>
                         {
-                            b.SetDynamic(props, Html.href, b.Get(service, x => x.ListUrl));
+                            b.SetHref(b.Get(service, x => x.ListUrl));
                         },
-                        b.SlNode(
-                            "sl-card",
-                            (b, props) =>
+                        b.SlCard(
+                            b =>
                             {
 
                             },
-                            b.T(b.Get(service, x => x.DocTypeName))));
+                            b.Text(b.Get(service, x => x.DocTypeName))));
                 }));
         }
     }

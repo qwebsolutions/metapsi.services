@@ -305,17 +305,20 @@ public static partial class ServiceDoc
                 descriptionBuilder.AppendLine(constructor.Value.ToString());
             }
 
+            var summaryHtml = descriptionBuilder.ToString();
+
             return Page.Result(
                 new ListDocsPageModel<T>()
                 {
                     ServerModel = new ServerModel<T>()
                     {
                         IdProperty = idProperty,
-                        DescriptionHtml = descriptionBuilder.ToString(),
+                        
                     },
                     ClientModel = new ListDocsPage<T>()
                     {
-                        Documents = list
+                        Documents = list,
+                        SummaryHtml = summaryHtml
                     }
                 });
         });
