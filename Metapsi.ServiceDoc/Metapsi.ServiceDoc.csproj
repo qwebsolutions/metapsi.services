@@ -9,11 +9,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Metapsi.Heroicons" Version="0.9.0" />
-		<PackageReference Include="Metapsi.Shoelace" Version="0.9.0" />
-		<PackageReference Include="Metapsi.SQLite" Version="0.9.0" />
-		<PackageReference Include="Metapsi.Web" Version="0.9.0" />
-		<PackageReference Include="Metapsi.Hyperapp" Version="0.9.0" />
+		<PackageReference Include="Metapsi.Heroicons" Version="0.9.4" />
+		<PackageReference Include="Metapsi.Shoelace" Version="0.9.4" />
+		<PackageReference Include="Metapsi.SQLite" Version="0.9.4" />
+		<PackageReference Include="Metapsi.Web" Version="0.9.4" />
+		<PackageReference Include="Metapsi.Hyperapp" Version="0.9.4" />
 	</ItemGroup>
 
 </Project>

@@ -32,9 +32,9 @@ namespace Metapsi
 
         public static void Render<T>(HtmlBuilder b, ListDocsPageModel<T> serverModel)
         {
-            StaticFiles.AddAll(typeof(Metapsi.Hyperapp.HyperType).Assembly);
-            b.HeadAppend(new LinkTag("stylesheet", $"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@{Cdn.Version}/cdn/themes/light.css"));
-            b.HeadAppend(new ExternalScriptTag($"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@{Cdn.Version}/cdn/shoelace-autoloader.js", "module"));
+            //StaticFiles.AddAll(typeof(Metapsi.Hyperapp.HyperType).Assembly);
+            //b.HeadAppend(new LinkTag("stylesheet", $"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@{Cdn.Version}/cdn/themes/light.css"));
+            //b.HeadAppend(new ExternalScriptTag($"https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@{Cdn.Version}/cdn/shoelace-autoloader.js", "module"));
 
             b.AddStylesheet();
             b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
@@ -377,7 +377,7 @@ namespace Metapsi
                         b.Get(model, x => x.Documents.Any()),
                         b =>
                         {
-                            var gridBuilder = Metapsi.Html.MdsDefaultBuilder.DataGrid<T>();
+                            var gridBuilder = DataGridBuilder.DataGrid<T>();
                             gridBuilder.AddRowAction((b, item) => b.EditDocumentButton(item, idProperty));
                             gridBuilder.AddRowAction((b, item) => b.DeleteDocumentButton(item, idProperty));
                             return b.DataGrid(gridBuilder, b.Get(model, x => x.Documents));
