@@ -7,6 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.ServiceDoc", "Metap
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Tests", "Metapsi.Tests\Metapsi.Tests.csproj", "{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Chat.Backend.Service", "Metapsi.Chat.Backend.Service\Metapsi.Chat.Backend.Service.csproj", "{017D95B5-4D0E-4855-B803-B792B0524F77}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Chat.Contracts", "Metapsi.Chat.Contracts\Metapsi.Chat.Contracts.csproj", "{1BFE5209-FE75-4562-A5B9-4A0B14618CBC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{017D95B5-4D0E-4855-B803-B792B0524F77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{017D95B5-4D0E-4855-B803-B792B0524F77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{017D95B5-4D0E-4855-B803-B792B0524F77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{017D95B5-4D0E-4855-B803-B792B0524F77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BFE5209-FE75-4562-A5B9-4A0B14618CBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BFE5209-FE75-4562-A5B9-4A0B14618CBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BFE5209-FE75-4562-A5B9-4A0B14618CBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BFE5209-FE75-4562-A5B9-4A0B14618CBC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

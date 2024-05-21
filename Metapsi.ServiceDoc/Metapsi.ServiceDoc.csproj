@@ -4,16 +4,30 @@
 		<TargetFramework>net7.0</TargetFramework>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<EmbeddedResource Include="embedded\Metapsi.ServiceDoc.css" LogicalName="Metapsi.ServiceDoc.css" />
+	<Import Condition="'$(Configuration)' == 'Debug'" Project="../paths.target" />
+
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Heroicons\Metapsi.Heroicons.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Shoelace\Metapsi.Shoelace.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Hyperapp\Metapsi.Hyperapp.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Web\Metapsi.Web.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Messaging\Metapsi.Messaging.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.SQLite\Metapsi.SQLite.csproj" />
 	</ItemGroup>
 
+
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<PackageReference Include="Metapsi.Heroicons" Version="*" />
+		<PackageReference Include="Metapsi.Shoelace" Version="*" />
+		<PackageReference Include="Metapsi.SQLite" Version="*" />
+		<PackageReference Include="Metapsi.Web" Version="*" />
+		<PackageReference Include="Metapsi.Messaging" Version="*" />
+		<PackageReference Include="Metapsi.Hyperapp" Version="*" />
+	</ItemGroup>
+
+
 	<ItemGroup>
-		<PackageReference Include="Metapsi.Heroicons" Version="0.9.4" />
-		<PackageReference Include="Metapsi.Shoelace" Version="0.9.4" />
-		<PackageReference Include="Metapsi.SQLite" Version="0.9.4" />
-		<PackageReference Include="Metapsi.Web" Version="0.9.4" />
-		<PackageReference Include="Metapsi.Hyperapp" Version="0.9.4" />
+		<EmbeddedResource Include="embedded\Metapsi.ServiceDoc.css" LogicalName="Metapsi.ServiceDoc.css" />
 	</ItemGroup>
 
 </Project>

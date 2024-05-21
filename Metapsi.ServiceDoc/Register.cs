@@ -4,98 +4,77 @@ using Metapsi.Shoelace;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Metapsi
 {
     public static class Register
     {
-        public static Request<T> InitDocument<T>() => new Request<T>($"{nameof(InitDocument)}/{typeof(T).Name}");
-        public static Request<List<T>> ListDocuments<T>() => new Request<List<T>>($"{nameof(ListDocuments)}/{typeof(T).Name}");
+        public static Request<T> InitDocument<T>() => new Request<T>(nameof(InitDocument));
+        public static Request<List<T>> ListDocuments<T>() => new Request<List<T>>(nameof(ListDocuments));
 
         internal static List<System.Type> DocTypes { get; set; } = new();
 
         public static async Task<string> RegisterDocsUi<T>(
-            this Metapsi.WebServer.References webServer,
+            this ApplicationSetup applicationSetup,
+            ImplementationGroup ig,
+            IEndpointRouteBuilder uiEndpoint,
             string dbPath,
-            Func<CommandContext, Task<List<T>>> listDocuments = null)
-            where T : Metapsi.ServiceDoc.IDocument, new()
-        {
-            return await RegisterDocsUi<T>(webServer, dbPath, x => x.Id, async (cc) => new T(), listDocuments);
-        }
-
-        public static async Task<string> RegisterDocsUi<T>(
-            this Metapsi.WebServer.References webServer,
-            string dbPath,
-            System.Linq.Expressions.Expression<Func<T,string>> idProperty,
+            System.Linq.Expressions.Expression<Func<T, string>> idProperty,
             Func<CommandContext, Task<T>> createDocument,
             Func<CommandContext, Task<List<T>>> listDocuments = null)
-        { 
+        {
             if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
 
             DocTypes.Add(typeof(T));
 
-            await webServer.RegisterDocBackendApi<T>(dbPath, idProperty);
-            var apiRoute = webServer.WebApplication.MapGroup("api");
-            apiRoute.RegisterDocFrontendApi<T>(WebServer.Authorization.Public, WebServer.Authorization.Public, WebServer.Authorization.Public, WebServer.Authorization.Public);
-            var restRoute = webServer.WebApplication.MapGroup("rest");
-            restRoute.RegisterDocFrontendRestApi<T>();
+            var typeEndpoint = uiEndpoint.MapGroup(typeof(T).Name);
+            typeEndpoint.RegisterDocUiHandlers<T>();
 
-            var listUrl = webServer.WebApplication.RegisterDocUiHandlers<T>(idProperty);
+            var apiEndpoint = typeEndpoint.MapGroup("api");
+            apiEndpoint.RegisterFrontendRestApi<T>();
 
-            webServer.Render<ListDocsPageModel<T>>(Metapsi.ServiceDoc.Render);
+            await applicationSetup.RegisterDocBackendApi<T>(ig, dbPath, idProperty);
 
-            //webServer.RegisterRenderer<ListDocsPageModel<T>, ListDocsRenderer<T>>();
+            uiEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, idProperty));
 
-            var noActualState = webServer.ApplicationSetup.AddBusinessState(new object());
+            var noActualState = applicationSetup.AddBusinessState(new object());
 
-            var apiGroup = webServer.WebApplication.MapGroup("api");
-            apiGroup.MapRequest(
+            apiEndpoint.MapRequest(
                 InitDocument<T>(),
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await createDocument(commandContext);
                 }, WebServer.Authorization.Public);
 
-            apiGroup.MapRequest(
+            apiEndpoint.MapRequest(
                 ListDocuments<T>(),
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await listDocuments(commandContext);
-                }, 
+                },
                 WebServer.Authorization.Public);
 
-            //webServer.ApplicationSetup.MapEvent<ApplicationRevived>(e =>
-            //{
-            //    e.Using(noActualState, webServer.ImplementationGroup).EnqueueCommand(
-            //        async (CommandContext commandContext, object _state) =>
-            //        {
-            //            var list = await commandContext.Do(NoSqlDoc.GetDocApi<T>().List);
-            //            commandContext.PostEvent(new NoSqlDoc.StartupListLoaded<T>()
-            //            {
-            //                Docs = list
-            //            });
-            //        });
-            //});
-
-            return listUrl;
+            return typeof(T).Name;
         }
 
         public static string RegisterDocsOverview(
-            this Metapsi.WebServer.References webServer)
+            this IEndpointRouteBuilder uiEndpoint)
         {
-            webServer.RegisterRenderer<DocsOverviewModel, OverviewDocsRenderer>();
-            webServer.WebApplication.RegisterGetHandler<OverviewHandler, Docs.Overview>();
+            uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
+            uiEndpoint.RegisterGetHandler<OverviewHandler, Docs.Overview>();
 
             return WebServer.Url<Docs.Overview>();
         }
 
-        public static void Render<TModel>(this WebServer.References refs, System.Action<HtmlBuilder, TModel> buildPage)
+        public static void Render<TModel>(this IEndpointRouteBuilder uiEndpoint, System.Action<HtmlBuilder, TModel> buildPage)
         {
-            refs.RegisterPageBuilder<TModel>(model =>
+            uiEndpoint.UseRenderer<TModel>(model =>
             {
                 var document = HtmlBuilder.FromDefault(b => buildPage(b, model));
                 return document.ToHtml();
@@ -139,31 +118,5 @@ namespace Metapsi
     public class DocsOverviewModel
     {
         public List<DocsService> DocServices { get; set; } = new();
-    }
-
-    public class OverviewDocsRenderer : Hyperapp.HyperPage<DocsOverviewModel>
-    {
-        public override Var<IVNode> OnRender(LayoutBuilder b, Var<DocsOverviewModel> model)
-        {
-            return b.HtmlDiv(
-                b =>
-                {
-                    b.SetClass("flex flex-row flex-wrap gap-2");
-                },
-                b.Map(b.Get(model, x => x.DocServices), (b, service) =>
-                {
-                    return b.HtmlA(
-                        b =>
-                        {
-                            b.SetHref(b.Get(service, x => x.ListUrl));
-                        },
-                        b.SlCard(
-                            b =>
-                            {
-
-                            },
-                            b.Text(b.Get(service, x => x.DocTypeName))));
-                }));
-        }
     }
 }

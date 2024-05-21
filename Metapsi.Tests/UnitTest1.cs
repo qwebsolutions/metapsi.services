@@ -1,11 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
+using System.Net;
 
 namespace Metapsi.ActiveTable.Tests;
 
@@ -37,14 +32,15 @@ public class UnitTest1
 
     public static async Task SetupService(Mds.ServiceSetup serviceSetup)
     {
-        //var parameters = serviceSetup.ParametersAs<Parameters>();
         var ig = serviceSetup.ApplicationSetup.AddImplementationGroup();
-
-        var webServerRefs = serviceSetup.ApplicationSetup.AddWebServer(ig, 5000);
-        //webServerRefs.RegisterStaticFiles(typeof(Metapsi.HtmlControls.Control).Assembly);
-
         var configurationDb = serviceSetup.GetServiceDataFile("test.db");
-        var configurationUrl = await webServerRefs.RegisterDocsUi<TestEntity>(
+
+        var appBuilder = WebApplication.CreateBuilder().AddMetapsiWebServices(serviceSetup.ApplicationSetup, ig);
+        var app = appBuilder.Build().UseMetapsi(serviceSetup.ApplicationSetup);
+
+        var configurationUrl = await serviceSetup.ApplicationSetup.RegisterDocsUi<TestEntity>(
+            ig,
+            app,
             configurationDb,
             (x) => x.Key,
             createDocument: async (cc) => new TestEntity()
@@ -53,6 +49,16 @@ public class UnitTest1
                 Notes = "Manually edited in " + serviceSetup.ServiceName
             });
 
-        webServerRefs.WebApplication.MapGet("/", () => Results.Redirect(configurationUrl)).AllowAnonymous().ExcludeFromDescription();
+        app.MapGet("/", () => Results.Redirect(configurationUrl)).AllowAnonymous().ExcludeFromDescription();
+    }
+
+    [TestMethod]
+    public async Task StartChatService()
+    {
+        var serviceSetup = Mds.ServiceSetup.New();
+        await SetupService(serviceSetup);
+
+        var app = serviceSetup.Revive();
+        await app.SuspendComplete;
     }
 }

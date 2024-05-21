@@ -27,11 +27,6 @@ public class DocDescriptionAttribute : Attribute
 
 public static partial class ServiceDoc
 {
-    public interface IDocument
-    {
-        public string Id { get; set; }
-    }
-
     public static string NormalizeTableName(string tableName)
     {
         return tableName.Replace(".", "_").Replace("`", "_");
@@ -57,7 +52,7 @@ public static partial class ServiceDoc
 
     private static HashSet<string> createdTables = new HashSet<string>();
 
-    public static async Task CreateDocumentTableAsync<T>(string fullDbPath)
+    public static async Task CreateDocumentTableAsync<T>(string fullDbPath, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
         var tableName = NormalizeTableName(typeof(T).FullName);
 
@@ -76,7 +71,8 @@ public static partial class ServiceDoc
 
             if (!createdTables.Contains(tableName))
             {
-                var indexProperties = new List<string>();
+                var indexProperties = new HashSet<string>();
+                indexProperties.Add(idProperty.PropertyName());
                 foreach (var property in typeof(T).GetProperties())
                 {
                     if (property.CustomAttributes.Any(x => x.AttributeType == typeof(DocIndexAttribute)))
@@ -86,12 +82,6 @@ public static partial class ServiceDoc
                 }
 
                 var tableColumnDeclarations = new List<string>();
-
-                if (typeof(T).IsAssignableTo(typeof(IDocument)))
-                    if (!indexProperties.Contains("Id"))
-                    {
-                        indexProperties.Add("Id");
-                    }
 
                 foreach (var indexProperty in indexProperties)
                 {
@@ -134,11 +124,11 @@ public static partial class ServiceDoc
         await transaction.Connection.ExecuteAsync($"insert into {tableName} (json) values(@json)", new { json = Metapsi.Serialize.ToJson(document) }, transaction);
     }
 
-    public static async Task DeleteDocument<T>(this System.Data.Common.DbTransaction transaction, T document)
-        where T : IDocument
+    public static async Task DeleteDocument<T>(this System.Data.Common.DbTransaction transaction, T document, System.Linq.Expressions.Expression<Func<T, string>> byProperty)
     {
         var tableName = NormalizeTableName(typeof(T).FullName);
-        await transaction.Connection.ExecuteAsync($"delete from {tableName} where id=@id", new { document.Id }, transaction);
+        var propertyName = byProperty.PropertyName();
+        await transaction.Connection.ExecuteAsync($"delete from {tableName} where [{propertyName}]=@{propertyName}", document, transaction);
     }
 
     public static async Task DeleteDocuments<T, TProp>(
@@ -151,10 +141,9 @@ public static partial class ServiceDoc
         var deletedCount = await transaction.Connection.ExecuteAsync($"delete from {tableName} where {propertyName}=@value", new { value }, transaction);
     }
 
-    public static async Task SaveDocument<T>(this System.Data.Common.DbTransaction transaction, T document)
-        where T : IDocument
+    public static async Task SaveDocument<T>(this System.Data.Common.DbTransaction transaction, T document, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
-        await DeleteDocument(transaction, document);
+        await DeleteDocument(transaction, document, idProperty);
         await InsertDocument(transaction, document);
     }
 
@@ -169,11 +158,13 @@ public static partial class ServiceDoc
         await InsertDocument(transaction, document);
     }
 
-    public static async Task<T> GetDocument<T>(this System.Data.Common.DbTransaction transaction, string id)
-        where T : IDocument
+    public static async Task<T> GetDocument<T>(this System.Data.Common.DbTransaction transaction, string id, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
         var tableName = NormalizeTableName(typeof(T).FullName);
-        var json = await transaction.Connection.ExecuteScalarAsync<string>($"select json from {tableName} where id = @id", new { id }, transaction);
+        var idPropertyName = idProperty.PropertyName();
+        Dictionary<string, object> parameters = new Dictionary<string, object>();
+        parameters.Add($"@{idPropertyName}", id);
+        var json = await transaction.Connection.ExecuteScalarAsync<string>($"select json from {tableName} where {idPropertyName} = @{idPropertyName}", new DynamicParameters(parameters), transaction);
 
         if (string.IsNullOrWhiteSpace(json))
         {

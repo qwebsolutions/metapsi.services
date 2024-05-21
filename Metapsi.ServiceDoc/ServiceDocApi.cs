@@ -69,25 +69,24 @@ public static partial class ServiceDoc
     }
 
     public static async Task RegisterDocBackendApi<T>(
-        this WebServer.References webServer,
+        this ApplicationSetup applicationSetup,
+        ImplementationGroup ig,
         string sqliteDbFullPath,
         System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
-        await CreateDocumentTableAsync<T>(sqliteDbFullPath);
+        await CreateDocumentTableAsync<T>(sqliteDbFullPath, idProperty);
 
-        var notARealState = webServer.ApplicationSetup.AddBusinessState(new object());
+        var notARealState = applicationSetup.AddBusinessState(new object());
 
-        webServer.ApplicationSetup.MapEvent<ApplicationRevived>(e =>
+        applicationSetup.MapEvent<ApplicationRevived>(e =>
 
-        e.Using(notARealState, webServer.ImplementationGroup).EnqueueCommand(
+        e.Using(notARealState, ig).EnqueueCommand(
             async (CommandContext commandContext, object _) =>
             {
-                await CreateDocumentTableAsync<T>(sqliteDbFullPath);
+                await CreateDocumentTableAsync<T>(sqliteDbFullPath, idProperty);
             }));
 
         var getId = idProperty.Compile();
-
-        var ig = webServer.ImplementationGroup;
 
         ig.MapRequest(GetDocApi<T>().Save,
             async (RequestRoutingContext rc, T input) =>
@@ -199,78 +198,34 @@ public static partial class ServiceDoc
         });
     }
 
-    public static void RegisterDocFrontendApi<T>(
-        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint,
-        WebServer.Authorization listAuthorization = WebServer.Authorization.Require,
-        WebServer.Authorization getAuthorization = WebServer.Authorization.Require,
-        WebServer.Authorization saveAuthorization = WebServer.Authorization.Require,
-        WebServer.Authorization deleteAuthorization = WebServer.Authorization.Require)
-    {
-        var docApi = GetDocApi<T>();
-
-        endpoint.MapRequest(
-            docApi.Save,
-            async (commandContext, httpContext, input) =>
-            {
-                return await commandContext.Do(docApi.Save, input);
-            },
-            saveAuthorization);
-
-        endpoint.MapRequest(
-            docApi.List,
-            async (commandContext, httpContext) =>
-            {
-                return await commandContext.Do(docApi.List);
-            },
-            listAuthorization);
-
-        endpoint.MapRequest(
-            docApi.Get,
-            async (commandContext, httpContext, id) =>
-            {
-                return await commandContext.Do(docApi.Get, id);
-            },
-            getAuthorization);
-
-        endpoint.MapRequest(
-            docApi.Delete,
-            async (commandContext, httpContext, id) =>
-            {
-                return await commandContext.Do(docApi.Delete, id);
-            },
-            deleteAuthorization);
-    }
-
-    public static void RegisterDocFrontendRestApi<T>(
+    public static void RegisterFrontendRestApi<T>(
         this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint)
     {
         var docApi = GetDocApi<T>();
 
-        string typeName = typeof(T).Name;
-
         endpoint.MapGet(
-            $"/{typeName}",
+            "/",
             async (CommandContext commandContext, HttpContext httpContext) =>
             {
                 return await commandContext.Do(docApi.List);
             });
 
         endpoint.MapGet(
-            $"/{typeName}/{{id}}",
+            "/{id}",
             async (CommandContext commandContext, HttpContext httpContext, string id) =>
             {
                 return await commandContext.Do(docApi.Get, id) is T item ? Results.Ok(item) : Results.NotFound();
             });
 
         endpoint.MapPost(
-            $"/{typeName}",
+            "/",
             async (CommandContext commandContext, HttpContext httpContext, T item) =>
             {
                 return await commandContext.Do(docApi.Save, item);
             });
 
         endpoint.MapDelete(
-            $"/{typeName}/{{id}}",
+            "/{id}",
             async (CommandContext commandContext, HttpContext httpContext, string id) =>
             {
                 var deleteResult = await commandContext.Do(docApi.Delete, id);
@@ -278,13 +233,10 @@ public static partial class ServiceDoc
             });
     }
 
-    public static string RegisterDocUiHandlers<T>(
-        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint,
-        System.Linq.Expressions.Expression<Func<T, string>> idProperty)
+    public static void RegisterDocUiHandlers<T>(
+        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder typeEndpoint)
     {
-        var typeEndpoint = endpoint.MapGroup(typeof(T).Name);
-
-        typeEndpoint.MapGet("/list", async (CommandContext commandContext, HttpContext httpContext) =>
+        typeEndpoint.MapGet("list", async (CommandContext commandContext, HttpContext httpContext) =>
         {
             var list = await commandContext.Do(GetDocApi<T>().List);
 
@@ -307,29 +259,19 @@ public static partial class ServiceDoc
 
             var summaryHtml = descriptionBuilder.ToString();
 
+            var apiBase = "/" + string.Join("/", httpContext.Request.Path.Value.Split("/", StringSplitOptions.RemoveEmptyEntries).SkipLast(1).Append("api"));
+
             return Page.Result(
-                new ListDocsPageModel<T>()
+                new ListDocsPage<T>()
                 {
-                    ServerModel = new ServerModel<T>()
-                    {
-                        IdProperty = idProperty,
-                        
-                    },
-                    ClientModel = new ListDocsPage<T>()
-                    {
-                        Documents = list,
-                        SummaryHtml = summaryHtml
-                    }
+                    ApiBase = apiBase,
+                    Documents = list,
+                    SummaryHtml = summaryHtml
                 });
-        });
-
-        return typeof(T).Name + "/list";
-    }
-
-    public class ListDocsPage<T>
-    {
-        public List<T> Documents { get; set; } = new List<T>();
-        public T EditDocument { get; set; }
-        public string SummaryHtml { get; set; }
+        }).AllowAnonymous();
+        typeEndpoint.MapGet("/", (HttpContext httpContext) =>
+        {
+            return Results.Redirect(httpContext.Request.Path + "/list");
+        }).AllowAnonymous();
     }
 }
