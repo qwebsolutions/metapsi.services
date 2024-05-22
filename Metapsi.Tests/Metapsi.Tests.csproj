@@ -26,6 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Metapsi.Chat.Backend.Service\Metapsi.Chat.Backend.Service.csproj" />
 		<ProjectReference Include="..\Metapsi.ServiceDoc\Metapsi.ServiceDoc.csproj" />
 	</ItemGroup>
 

@@ -37,7 +37,6 @@ namespace Metapsi
                     var checkbox = b.SlCheckbox(
                         b =>
                         {
-                            b.Comment("Bind to checkbox");
                             // ignore model, use reference
                             b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), BoolPropertyExpression<TEntity>(property.Name), Converter.BoolConverter);
                         },
@@ -50,7 +49,6 @@ namespace Metapsi
                     var input = b.SlInput(
                         b =>
                         {
-                            b.Comment("Bind to input");
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
                             b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), StringPropertyExpression<TEntity>(property.Name));
                         });

@@ -3,6 +3,7 @@ using Metapsi.Hyperapp;
 using Metapsi.Shoelace;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System;
@@ -13,17 +14,84 @@ using System.Threading.Tasks;
 
 namespace Metapsi
 {
-    public static class Register
+    public static partial class ServiceDoc
     {
+        public class Config
+        {
+            internal List<Task> registerDocs = new();
+            internal List<Func<CommandContext, Task<DocsService>>> getOverview = new();
+
+            internal IEndpointRouteBuilder uiEndpoint { get; set; }
+            internal ApplicationSetup applicationSetup { get; set; }
+            internal ImplementationGroup ig { get; set; }
+            internal string dbPath { get; set; }
+
+            public void AddDoc<T>(Expression<Func<T, string>> idProperty, Func<CommandContext, Task<T>> createDocument, Func<CommandContext, Task<List<T>>> listDocuments = null)
+            {
+                if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
+
+                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, createDocument, listDocuments));
+                getOverview.Add(async (CommandContext commandContext) =>
+                {
+                    var count = await listDocuments(commandContext);
+                    return new DocsService()
+                    {
+                        DocTypeName = typeof(T).Name,
+                        Count = (await listDocuments(commandContext)).Count,
+                        ListUrl = typeof(T).Name + "/list"
+                    };
+                });
+            }
+        }
+
+        public class Props<T>
+        {
+            public System.Linq.Expressions.Expression<Func<T, string>> IdProperty { get; set; }
+            public Func<CommandContext, Task<T>> Create { get; set; }
+            public Func<CommandContext, Task<List<T>>> List { get; set; }
+        }
+
         public static Request<T> InitDocument<T>() => new Request<T>(nameof(InitDocument));
         public static Request<List<T>> ListDocuments<T>() => new Request<List<T>>(nameof(ListDocuments));
 
-        internal static List<System.Type> DocTypes { get; set; } = new();
-
-        public static async Task<string> RegisterDocsUi<T>(
-            this ApplicationSetup applicationSetup,
+        public static async Task<RouteHandlerBuilder> UseDocsGroup(
+            this IEndpointRouteBuilder uiEndpoint,
+            ApplicationSetup applicationSetup,
             ImplementationGroup ig,
-            IEndpointRouteBuilder uiEndpoint,
+            string dbPath,
+            Action<Config> setProps)
+        {
+            var propsConfigurator = new Config()
+            {
+                applicationSetup = applicationSetup,
+                dbPath = dbPath,
+                ig = ig,
+                uiEndpoint = uiEndpoint
+            };
+            setProps(propsConfigurator);
+
+            await Task.WhenAll(propsConfigurator.registerDocs);
+
+            var groupName = Guid.NewGuid();
+
+            uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
+            var docsRoute = uiEndpoint.MapGet("/docs", async (CommandContext commandContext, HttpContext httpContext) =>
+            {
+                var docsOverviewModel = new DocsOverviewModel();
+                foreach (var getOverview in propsConfigurator.getOverview)
+                {
+                    docsOverviewModel.DocServices.Add(await getOverview(commandContext));
+                }
+
+                return Page.Result(docsOverviewModel);
+            });
+            return docsRoute;
+        }
+
+        private static async Task FillTypeEndpoint<T>(
+            this IEndpointRouteBuilder typeEndpoint,
+            ApplicationSetup applicationSetup,
+            ImplementationGroup ig,
             string dbPath,
             System.Linq.Expressions.Expression<Func<T, string>> idProperty,
             Func<CommandContext, Task<T>> createDocument,
@@ -31,9 +99,6 @@ namespace Metapsi
         {
             if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
 
-            DocTypes.Add(typeof(T));
-
-            var typeEndpoint = uiEndpoint.MapGroup(typeof(T).Name);
             typeEndpoint.RegisterDocUiHandlers<T>();
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
@@ -41,7 +106,7 @@ namespace Metapsi
 
             await applicationSetup.RegisterDocBackendApi<T>(ig, dbPath, idProperty);
 
-            uiEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, idProperty));
+            typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, idProperty));
 
             var noActualState = applicationSetup.AddBusinessState(new object());
 
@@ -58,17 +123,21 @@ namespace Metapsi
                 {
                     return await listDocuments(commandContext);
                 }).AllowAnonymous();
-
-            return typeof(T).Name;
         }
 
-        public static string RegisterDocsOverview(
-            this IEndpointRouteBuilder uiEndpoint)
+        public static async Task<string> UseDocs<T>(
+            this IEndpointRouteBuilder uiEndpoint,
+            ApplicationSetup applicationSetup,
+            ImplementationGroup ig,
+            string dbPath,
+            System.Linq.Expressions.Expression<Func<T, string>> idProperty,
+            Func<CommandContext, Task<T>> createDocument,
+            Func<CommandContext, Task<List<T>>> listDocuments = null)
         {
-            uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
-            uiEndpoint.RegisterGetHandler<OverviewHandler, Docs.Overview>();
-
-            return WebServer.Url<Docs.Overview>();
+            var typeName = typeof(T).Name;
+            var typeEndpoint = uiEndpoint.MapGroup(typeName);
+            await FillTypeEndpoint(typeEndpoint, applicationSetup, ig, dbPath, idProperty, createDocument, listDocuments);
+            return typeName;
         }
 
         public static void Render<TModel>(this IEndpointRouteBuilder uiEndpoint, System.Action<HtmlBuilder, TModel> buildPage)
@@ -78,32 +147,6 @@ namespace Metapsi
                 var document = HtmlBuilder.FromDefault(b => buildPage(b, model));
                 return document.ToHtml();
             });
-        }
-    }
-
-    public class Docs
-    {
-        public class Overview : Metapsi.Route.IGet
-        {
-
-        }
-    }
-
-    public class OverviewHandler : Http.Get<Docs.Overview>
-    {
-        public override async Task<IResult> OnGet(CommandContext commandContext, HttpContext httpContext)
-        {
-            var docsOverviewModel = new DocsOverviewModel();
-            foreach (var type in Register.DocTypes)
-            {
-                docsOverviewModel.DocServices.Add(new DocsService()
-                {
-                    DocTypeName = type.Name,
-                    ListUrl = "/" + type.Name + "/list"
-                });
-            }
-
-            return Page.Result(docsOverviewModel);
         }
     }
 

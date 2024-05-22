@@ -4,60 +4,51 @@ using System.Threading.Tasks;
 
 namespace Metapsi.Chat;
 
-public class ConversationMetadata
-{
-    public string Key { get; set; }
-    public string Value { get; set; }
-}
-
+/// <summary>
+/// Groups endpoints (user perspectives) and messages
+/// </summary>
 public class Conversation
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public List<ConversationMetadata> Metadata { get; set; } = new();
 }
 
-public static class ConversationExtensions
-{
-    public static void Add(this List<ConversationMetadata> conversationMetadata, string key, string value)
-    {
-        conversationMetadata.Add(new ConversationMetadata() { Key = key, Value = value });
-    }
-}
-
-public class ConversationEndpoint
+/// <summary>
+/// The perspective a particular user has of a conversation
+/// </summary>
+public class UserConversationEndpoint
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string MessagingGroupId { get; set; }
+    public string JoinedTimestamp = DateTime.UtcNow.Roundtrip();
+    public string ConversationId { get; set; }
     public string UserId { get; set; }
 }
 
 /// <summary>
 /// Text message from any endpoint
 /// </summary>
-public class ConversationMessage
+public class Message
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string FromEndpointId { get; set; }
-    public string ChatGroupId { get; set; }
     public string Timestamp { get; set; } = DateTime.UtcNow.Roundtrip();
+    public string FromEndpointId { get; set; }
     public string MessageText { get; set; }
 }
 
-public enum ChatUpdateType
-{
-    NewMessage,
-    MessageRemoved,
-    MessageEdited,
-    UserJoined,
-    UserLeft
-}
+//public enum ChatUpdateType
+//{
+//    NewMessage,
+//    MessageRemoved,
+//    MessageEdited,
+//    UserJoined,
+//    UserLeft
+//}
 
-/// <summary>
-/// Used for triggering refresh
-/// </summary>
-public class ChatUpdatedEvent
-{
-    public string MessagingGroupId { get; set; }
-    public ChatUpdateType ChangeType { get; set; }
-    public string RelatedId { get; set; }
-}
+///// <summary>
+///// Used for triggering refresh
+///// </summary>
+//public class ChatUpdatedEvent
+//{
+//    public string MessagingGroupId { get; set; }
+//    public ChatUpdateType ChangeType { get; set; }
+//    public string RelatedId { get; set; }
+//}

@@ -47,7 +47,7 @@ namespace Metapsi
                     return b.HtmlDiv(
                         b =>
                         {
-                            b.SetClass("flex flex-row flex-wrap gap-2");
+                            b.SetClass("flex flex-row flex-wrap gap-2 p-4");
                         },
                         b.Map(b.Get(model, x => x.DocServices), (b, service) =>
                         {
@@ -59,9 +59,19 @@ namespace Metapsi
                                 b.SlCard(
                                     b =>
                                     {
-
                                     },
-                                    b.Text(b.Get(service, x => x.DocTypeName))));
+                                    b.HtmlDiv(
+                                        b=>
+                                        {
+                                            b.SetClass("font-semibold text-gray-800");
+                                        },
+                                        b.Text(b.Get(service, x => x.DocTypeName))),
+                                    b.HtmlDiv(
+                                        b=>
+                                        {
+                                            b.SetClass("text-gray-600");
+                                        },
+                                        b.Text(b.AsString(b.Get(service, x => x.Count))))));
                         }));
                 }));
         }
@@ -236,7 +246,7 @@ namespace Metapsi
                 model,
                 (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
                 {
-                    b.GetJson<T>(b.GetApiUrl(model, b.Const(Register.InitDocument<T>().Name)),
+                    b.GetJson<T>(b.GetApiUrl(model, b.Const(ServiceDoc.InitDocument<T>().Name)),
                         b.Def((SyntaxBuilder b, Var<T> newDocument) =>
                         {
                             b.Dispatch(dispatch, onResult, newDocument);
@@ -332,8 +342,6 @@ namespace Metapsi
                 {
                     var documentId = b.Call(getId, b.Get(model, x => x.EditDocument));
                     var url = b.GetApiUrl(model, documentId);
-                    var fetchOptions = b.NewObj<FetchOptions>();
-                    b.Set(fetchOptions, x => x.method, "DELETE");
 
                     var fetch = b.Fetch(url, b =>
                     {
@@ -373,7 +381,7 @@ namespace Metapsi
                     model,
                     (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
                     {
-                        b.GetJson<List<T>>(b.GetApiUrl(model, b.Const(Register.ListDocuments<T>().Name)),
+                        b.GetJson<List<T>>(b.GetApiUrl(model, b.Const(ServiceDoc.ListDocuments<T>().Name)),
                             b.Def((SyntaxBuilder b, Var<List<T>> newList) =>
                             {
                                 b.Dispatch(dispatch, onResult, newList);
