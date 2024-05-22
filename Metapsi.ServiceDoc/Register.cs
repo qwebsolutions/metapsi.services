@@ -45,20 +45,19 @@ namespace Metapsi
 
             var noActualState = applicationSetup.AddBusinessState(new object());
 
-            apiEndpoint.MapRequest(
-                InitDocument<T>(),
+            apiEndpoint.MapGet(
+                InitDocument<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await createDocument(commandContext);
-                }, WebServer.Authorization.Public);
+                }).AllowAnonymous();
 
-            apiEndpoint.MapRequest(
-                ListDocuments<T>(),
+            apiEndpoint.MapGet(
+                ListDocuments<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await listDocuments(commandContext);
-                },
-                WebServer.Authorization.Public);
+                }).AllowAnonymous();
 
             return typeof(T).Name;
         }
