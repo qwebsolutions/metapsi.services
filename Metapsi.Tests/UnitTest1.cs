@@ -1,13 +1,12 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Metapsi.Chat.Backend;
-using static Metapsi.Mds;
+using Metapsi.Chat;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace Metapsi.ActiveTable.Tests;
+namespace Metapsi.Services.Tests;
 
 [DocDescription("Description here")]
 public class TestEntity

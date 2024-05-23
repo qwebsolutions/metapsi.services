@@ -2,16 +2,14 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Threading.Tasks;
-using Metapsi.Messaging;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Linq;
 
 
-namespace Metapsi.Chat.Backend;
+namespace Metapsi.Chat;
 
 public static class ChatServiceExtensions
 {
