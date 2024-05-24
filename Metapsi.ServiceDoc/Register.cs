@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ namespace Metapsi
         public class Config
         {
             internal List<Task> registerDocs = new();
-            internal List<Func<CommandContext, HttpContext, Task<DocsService>>> getOverview = new();
+            internal List<Func<CommandContext, HttpContext, Task<DocTypeOverview>>> getOverview = new();
 
             internal IEndpointRouteBuilder uiEndpoint { get; set; }
             internal ApplicationSetup applicationSetup { get; set; }
@@ -36,12 +37,13 @@ namespace Metapsi
                 {
                     var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
                     var apiUrl = linkGenerator.GetPathByName(httpContext, $"api-{typeof(T).Name}");
+                    var listUrl = "/" + string.Join("/", apiUrl.Split("/", StringSplitOptions.RemoveEmptyEntries).SkipLast(1).Append("list"));
                     var count = await commandContext.Do(GetDocApi<T>().Count);
-                    return new DocsService()
+                    return new DocTypeOverview()
                     {
                         DocTypeName = typeof(T).Name,
                         Count = (await listDocuments(commandContext)).Count,
-                        ListUrl = typeof(T).Name + "/list",
+                        ListUrl = listUrl,
                         ApiUrl = apiUrl
                     };
                 });
@@ -88,7 +90,7 @@ namespace Metapsi
                 var docsOverviewModel = new DocsOverviewModel();
                 foreach (var getOverview in propsConfigurator.getOverview)
                 {
-                    docsOverviewModel.DocServices.Add(await getOverview(commandContext, httpContext));
+                    docsOverviewModel.DocTypes.Add(await getOverview(commandContext, httpContext));
                 }
 
                 return Page.Result(docsOverviewModel);
@@ -158,7 +160,7 @@ namespace Metapsi
         }
     }
 
-    public class DocsService
+    internal class DocTypeOverview
     {
         public string DocTypeName { get; set; } = string.Empty;
         public int Count { get; set; } = 0;
@@ -166,8 +168,8 @@ namespace Metapsi
         public string ApiUrl { get; set; } = string.Empty;
     }
 
-    public class DocsOverviewModel
+    internal class DocsOverviewModel
     {
-        public List<DocsService> DocServices { get; set; } = new();
+        public List<DocTypeOverview> DocTypes { get; set; } = new();
     }
 }

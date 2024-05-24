@@ -94,7 +94,7 @@ public class ChatClient
         new ServiceDoc.Client<Conversation>()
         {
             HttpClient = this.HttpClient,
-            ApiUrl = this.ApiUrl.Trim('/') + "/" + nameof(Conversations) + "/api/",
+            ApiUrl = this.ApiUrl.TrimEnd('/').Replace("/api", string.Empty) + "/" + nameof(Conversations) + "/api/",
         };
 
     public ServiceDoc.Client<UserConversationEndpoint> Endpoints =>
@@ -108,7 +108,7 @@ public class ChatClient
         new ServiceDoc.Client<Message>()
         {
             HttpClient = this.HttpClient,
-            ApiUrl = this.ApiUrl
+            ApiUrl = this.ApiUrl.TrimEnd('/').Replace("/api", string.Empty) + "/" + nameof(Message) + "/api/",
         };
 }
 

@@ -27,7 +27,7 @@ namespace Metapsi
         private const string IdEditDocument = "id-edit-document";
         private const string IdRemoveDocument = "id-remove-document";
 
-        public static void Render<T>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, string>> idProperty)
+        internal static void Render<T>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, string>> idProperty)
         {
             b.AddStylesheet();
             b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
@@ -38,7 +38,7 @@ namespace Metapsi
                 }));
         }
 
-        public static void Render(HtmlBuilder b, DocsOverviewModel model)
+        internal static void Render(HtmlBuilder b, DocsOverviewModel model)
         {
             b.AddStylesheet();
             b.BodyAppend(b.Hyperapp(model,
@@ -49,7 +49,7 @@ namespace Metapsi
                         {
                             b.SetClass("flex flex-row flex-wrap gap-2 p-4");
                         },
-                        b.Map(b.Get(model, x => x.DocServices), (b, service) =>
+                        b.Map(b.Get(model, x => x.DocTypes), (b, service) =>
                         {
                             return b.HtmlA(
                                 b =>
