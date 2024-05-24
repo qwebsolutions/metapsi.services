@@ -1,6 +1,8 @@
-﻿using Metapsi.Sqlite;
+﻿using Dapper;
+using Metapsi.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,6 +51,7 @@ public static partial class ServiceDoc
     {
         public Request<SaveResult<T>, T> Save { get; set; }
         public Request<List<T>> List { get; set; }
+        public Request<int> Count { get; set; }
         public Request<T, string> Get { get; set; }
         public Request<DeleteResult<T>, string> Delete { get; set; }
     }
@@ -60,7 +63,8 @@ public static partial class ServiceDoc
             Save = new Request<SaveResult<T>, T>($"Save{typeof(T).Name}"),
             List = new Request<List<T>>($"List{typeof(T).Name}"),
             Get = new Request<T, string>($"Get{typeof(T).Name}"),
-            Delete = new Request<DeleteResult<T>, string>($"Delete{typeof(T).Name}")
+            Delete = new Request<DeleteResult<T>, string>($"Delete{typeof(T).Name}"),
+            Count = new Request<int>($"Count{typeof(T).Name}")
         };
     }
 
@@ -197,6 +201,16 @@ public static partial class ServiceDoc
 
             return deleteResult;
         });
+
+        ig.MapRequest(GetDocApi<T>().Count, async (rc) =>
+        {
+            return await Db.WithRollback(
+                sqliteDbFullPath,
+                async (transaction) =>
+                {
+                    return await transaction.Connection.ExecuteScalarAsync<int>($"select count (1) from {TableName<T>()}");
+                });
+        });
     }
 
     public static void RegisterFrontendRestApi<T>(
@@ -209,7 +223,7 @@ public static partial class ServiceDoc
             async (CommandContext commandContext, HttpContext httpContext) =>
             {
                 return await commandContext.Do(docApi.List);
-            });
+            }).WithMetadata(new EndpointNameAttribute($"api-{typeof(T).Name}"));
 
         endpoint.MapGet(
             "/{id}",

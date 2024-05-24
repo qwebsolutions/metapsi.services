@@ -13,10 +13,10 @@ namespace Metapsi.Chat;
 
 public static class ChatServiceExtensions
 {
-    public static async Task<RouteHandlerBuilder> AddChatBackend(
-        this ApplicationSetup applicationSetup,
+    public static async Task<RouteHandlerBuilder> UseMetapsiChat(
+        this IEndpointRouteBuilder endpoint,
+        ApplicationSetup applicationSetup,
         ImplementationGroup ig,
-        IEndpointRouteBuilder endpoint,
         string dbPath)
     {
         var overviewRoute = await endpoint.UseDocsGroup(applicationSetup, ig, dbPath,
@@ -89,6 +89,27 @@ public class ChatClient
 
     public HttpClient HttpClient { get; set; }
     public string ApiUrl { get; set; }
+
+    public ServiceDoc.Client<Conversation> Conversations =>
+        new ServiceDoc.Client<Conversation>()
+        {
+            HttpClient = this.HttpClient,
+            ApiUrl = this.ApiUrl.Trim('/') + "/" + nameof(Conversations) + "/api/",
+        };
+
+    public ServiceDoc.Client<UserConversationEndpoint> Endpoints =>
+        new ServiceDoc.Client<UserConversationEndpoint>()
+        {
+            HttpClient = this.HttpClient,
+            ApiUrl = this.ApiUrl.TrimEnd('/').Replace("/api", string.Empty) + "/" + nameof(UserConversationEndpoint) + "/api/",
+        };
+
+    public ServiceDoc.Client<Metapsi.Chat.Message> Messages =>
+        new ServiceDoc.Client<Message>()
+        {
+            HttpClient = this.HttpClient,
+            ApiUrl = this.ApiUrl
+        };
 }
 
 public class CreateConversationRequest

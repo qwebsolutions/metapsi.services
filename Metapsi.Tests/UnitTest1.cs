@@ -45,7 +45,7 @@ public class UnitTest1
         var ig = serviceSetup.ApplicationSetup.AddImplementationGroup();
         var configurationDb = serviceSetup.GetServiceDataFile("test.db");
 
-        var appBuilder = WebApplication.CreateBuilder().AddMetapsiWebServices(serviceSetup.ApplicationSetup, ig);
+        var appBuilder = WebApplication.CreateBuilder().AddMetapsi(serviceSetup.ApplicationSetup, ig);
         var app = appBuilder.Build().UseMetapsi(serviceSetup.ApplicationSetup);
 
         var configurationUrl = await app.UseDocs(
@@ -72,11 +72,11 @@ public class UnitTest1
         System.IO.Directory.CreateDirectory(testDataFolder);
         var chatDbPath = System.IO.Path.Combine(testDataFolder, "chat.db");
 
-        var appBuilder = WebApplication.CreateBuilder().AddMetapsiWebServices(applicationSetup, ig);
+        var appBuilder = WebApplication.CreateBuilder().AddMetapsi(applicationSetup, ig);
         var webApp = appBuilder.Build();
         webApp.UseMetapsi(applicationSetup);
         var chatEndpoint = webApp.MapGroup("chat");
-        var chatOverview = await applicationSetup.AddChatBackend(ig, chatEndpoint, chatDbPath);
+        var chatOverview = await chatEndpoint.UseMetapsiChat(applicationSetup, ig, chatDbPath);
         chatOverview.WithMetadata(new EndpointNameMetadata("chat-overview"));
 
         var configEndpoint = webApp.MapGroup("config");

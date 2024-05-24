@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -19,7 +20,7 @@ namespace Metapsi
         public class Config
         {
             internal List<Task> registerDocs = new();
-            internal List<Func<CommandContext, Task<DocsService>>> getOverview = new();
+            internal List<Func<CommandContext, HttpContext, Task<DocsService>>> getOverview = new();
 
             internal IEndpointRouteBuilder uiEndpoint { get; set; }
             internal ApplicationSetup applicationSetup { get; set; }
@@ -31,14 +32,17 @@ namespace Metapsi
                 if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
 
                 registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, createDocument, listDocuments));
-                getOverview.Add(async (CommandContext commandContext) =>
+                getOverview.Add(async (CommandContext commandContext, HttpContext httpContext) =>
                 {
-                    var count = await listDocuments(commandContext);
+                    var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
+                    var apiUrl = linkGenerator.GetPathByName(httpContext, $"api-{typeof(T).Name}");
+                    var count = await commandContext.Do(GetDocApi<T>().Count);
                     return new DocsService()
                     {
                         DocTypeName = typeof(T).Name,
                         Count = (await listDocuments(commandContext)).Count,
-                        ListUrl = typeof(T).Name + "/list"
+                        ListUrl = typeof(T).Name + "/list",
+                        ApiUrl = apiUrl
                     };
                 });
             }
@@ -70,7 +74,11 @@ namespace Metapsi
             };
             setProps(propsConfigurator);
 
-            await Task.WhenAll(propsConfigurator.registerDocs);
+            // Execute sequentially because they share the same db
+            foreach(var task in propsConfigurator.registerDocs)
+            {
+                await task;
+            }
 
             var groupName = Guid.NewGuid();
 
@@ -80,7 +88,7 @@ namespace Metapsi
                 var docsOverviewModel = new DocsOverviewModel();
                 foreach (var getOverview in propsConfigurator.getOverview)
                 {
-                    docsOverviewModel.DocServices.Add(await getOverview(commandContext));
+                    docsOverviewModel.DocServices.Add(await getOverview(commandContext, httpContext));
                 }
 
                 return Page.Result(docsOverviewModel);
@@ -155,6 +163,7 @@ namespace Metapsi
         public string DocTypeName { get; set; } = string.Empty;
         public int Count { get; set; } = 0;
         public string ListUrl { get; set; } = string.Empty;
+        public string ApiUrl { get; set; } = string.Empty;
     }
 
     public class DocsOverviewModel

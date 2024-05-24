@@ -29,7 +29,12 @@ public static partial class ServiceDoc
 {
     public static string NormalizeTableName(string tableName)
     {
-        return tableName.Replace(".", "_").Replace("`", "_");
+        return tableName.Replace(".", "_").Replace("`", "_").Replace("+", "_");
+    }
+
+    public static string TableName<T>()
+    {
+        return NormalizeTableName(typeof(T).FullName);
     }
 
     internal class JustJson
@@ -59,6 +64,9 @@ public static partial class ServiceDoc
         // If the table is created don't attempt to create it again
         if (TableCreated<T>())
             return;
+
+        // creates only if it does not exist
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(fullDbPath));
 
         using (SQLiteConnection conn = Sqlite.Db.ToConnection(fullDbPath))
         {

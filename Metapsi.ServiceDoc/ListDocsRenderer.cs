@@ -71,7 +71,13 @@ namespace Metapsi
                                         {
                                             b.SetClass("text-gray-600");
                                         },
-                                        b.Text(b.AsString(b.Get(service, x => x.Count))))));
+                                        b.Text(b.AsString(b.Get(service, x => x.Count)))),
+                                    b.HtmlDiv(
+                                        b=>
+                                        {
+                                            b.SetClass("text-xs");
+                                        },
+                                        b.Text(b.Get(service, x=>x.ApiUrl)))));
                         }));
                 }));
         }
