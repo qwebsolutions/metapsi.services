@@ -18,8 +18,10 @@ namespace Metapsi
 {
     public static partial class ServiceDoc
     {
-        public class GroupConfig
+        public class DocsGroup
         {
+            // The tasks handle the DocumentProps inside
+
             internal List<Task> registerDocs = new();
             internal List<Func<CommandContext, HttpContext, Task<DocTypeOverview>>> getOverview = new();
 
@@ -27,43 +29,6 @@ namespace Metapsi
             internal ApplicationSetup applicationSetup { get; set; }
             internal ImplementationGroup ig { get; set; }
             internal string dbPath { get; set; }
-
-            public void AddDoc<T>(Expression<Func<T, string>> idProperty, Func<CommandContext, Task<T>> createDocument, Func<CommandContext, Task<List<T>>> listDocuments = null)
-            {
-                if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
-
-                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, DataTable.GetColumns<T>(), createDocument, listDocuments));
-                getOverview.Add(async (CommandContext commandContext, HttpContext httpContext) =>
-                {
-                    var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
-                    var apiUrl = linkGenerator.GetPathByName(httpContext, $"api-{typeof(T).Name}");
-                    var listUrl = "/" + string.Join("/", apiUrl.Split("/", StringSplitOptions.RemoveEmptyEntries).SkipLast(1).Append("list"));
-                    var count = await commandContext.Do(GetDocApi<T>().Count);
-                    return new DocTypeOverview()
-                    {
-                        DocTypeName = typeof(T).Name,
-                        Count = (await listDocuments(commandContext)).Count,
-                        ListUrl = listUrl,
-                        ApiUrl = apiUrl
-                    };
-                });
-            }
-
-            public void AddDoc<T>(Expression<Func<T, string>> idProperty, Action<DocumentProps<T>> setProps)
-                where T : new()
-            {
-                DocumentProps<T> docProps = new DocumentProps<T>() { IdProperty = idProperty };
-                setProps(docProps);
-                if (docProps.Create == null) docProps.Create = async (cc) => new T();
-                if (docProps.List == null) docProps.List = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
-
-                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, docProps.TableColumns, docProps.Create, docProps.List));
-            }
-        }
-
-        public static void ShowColumns<T>(this DocumentProps<T> b, params string[] columnNames)
-        {
-            b.TableColumns = columnNames.ToList();
         }
 
         public class DocumentProps<T>
@@ -74,17 +39,73 @@ namespace Metapsi
             public List<string> TableColumns { get; set; } = DataTable.GetColumns<T>();
         }
 
+        public static void AddDoc<T>(
+            this DocsGroup docsGroup,
+            Expression<Func<T, string>> idProperty,
+            Action<DocumentProps<T>> setProps = null)
+            where T : new()
+        {
+            docsGroup.AddDoc(
+                idProperty,
+                async (cc) => new T(),
+                setProps);
+        }
+
+        public static void AddDoc<T>(
+            this DocsGroup docsGroup,
+            Expression<Func<T, string>> idProperty,
+            Func<CommandContext, Task<T>> createDocument,
+            Action<DocumentProps<T>> setProps = null)
+        {
+            DocumentProps<T> docProps = new DocumentProps<T>() { IdProperty = idProperty };
+            docProps.Create = createDocument;
+            if (setProps != null)
+            {
+                setProps(docProps);
+            }
+            if (docProps.List == null) docProps.List = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
+
+            var typeName = typeof(T).Name;
+            var typeEndpoint = docsGroup.uiEndpoint.MapGroup(typeName);
+
+            docsGroup.registerDocs.Add(
+                FillTypeEndpoint(
+                    typeEndpoint,
+                    docsGroup,
+                    docProps));
+            docsGroup.getOverview.Add(async (CommandContext commandContext, HttpContext httpContext) =>
+            {
+                var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
+                var apiUrl = linkGenerator.GetPathByName(httpContext, $"api-{typeof(T).Name}");
+                var listUrl = "/" + string.Join("/", apiUrl.Split("/", StringSplitOptions.RemoveEmptyEntries).SkipLast(1).Append("list"));
+                var count = await commandContext.Do(GetDocApi<T>().Count);
+                return new DocTypeOverview()
+                {
+                    DocTypeName = typeof(T).Name,
+                    Count = count,
+                    ListUrl = listUrl,
+                    ApiUrl = apiUrl
+                };
+            });
+        }
+
+        public static void SetDefaultColumns<T>(this DocumentProps<T> b, params string[] columnNames)
+        {
+            b.TableColumns = columnNames.ToList();
+        }
+
+
         public static Request<T> InitDocument<T>() => new Request<T>(nameof(InitDocument));
         public static Request<List<T>> ListDocuments<T>() => new Request<List<T>>(nameof(ListDocuments));
 
-        public static async Task<RouteHandlerBuilder> UseDocsGroup(
+        public static async Task<RouteHandlerBuilder> UseDocs(
             this IEndpointRouteBuilder uiEndpoint,
             ApplicationSetup applicationSetup,
             ImplementationGroup ig,
             string dbPath,
-            Action<GroupConfig> setProps)
+            Action<DocsGroup> setProps)
         {
-            var propsConfigurator = new GroupConfig()
+            var propsConfigurator = new DocsGroup()
             {
                 applicationSetup = applicationSetup,
                 dbPath = dbPath,
@@ -117,57 +138,50 @@ namespace Metapsi
 
         private static async Task FillTypeEndpoint<T>(
             this IEndpointRouteBuilder typeEndpoint,
-            ApplicationSetup applicationSetup,
-            ImplementationGroup ig,
-            string dbPath,
-            System.Linq.Expressions.Expression<Func<T, string>> idProperty,
-            List<string> columns,
-            Func<CommandContext, Task<T>> createDocument,
-            Func<CommandContext, Task<List<T>>> listDocuments = null)
+            DocsGroup docsGroup,
+            DocumentProps<T> documentProps)
         {
-            if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
-
-            typeEndpoint.RegisterDocUiHandlers<T>(columns);
+            typeEndpoint.RegisterDocUiHandlers<T>(documentProps);
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
             apiEndpoint.RegisterFrontendRestApi<T>();
 
-            await applicationSetup.RegisterDocBackendApi<T>(ig, dbPath, idProperty);
+            await docsGroup.applicationSetup.RegisterDocBackendApi<T>(docsGroup.ig, docsGroup.dbPath, documentProps.IdProperty);
 
-            typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, idProperty));
+            typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, documentProps.IdProperty));
 
-            var noActualState = applicationSetup.AddBusinessState(new object());
+            var noActualState = docsGroup.applicationSetup.AddBusinessState(new object());
 
             apiEndpoint.MapGet(
                 InitDocument<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
-                    return await createDocument(commandContext);
+                    return await documentProps.Create(commandContext);
                 }).AllowAnonymous();
 
             apiEndpoint.MapGet(
                 ListDocuments<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
-                    return await listDocuments(commandContext);
+                    return await documentProps.List(commandContext);
                 }).AllowAnonymous();
         }
 
-        public static async Task<string> UseDocs<T>(
-            this IEndpointRouteBuilder uiEndpoint,
-            ApplicationSetup applicationSetup,
-            ImplementationGroup ig,
-            string dbPath,
-            System.Linq.Expressions.Expression<Func<T, string>> idProperty,
-            List<string> columns,
-            Func<CommandContext, Task<T>> createDocument,
-            Func<CommandContext, Task<List<T>>> listDocuments = null)
-        {
-            var typeName = typeof(T).Name;
-            var typeEndpoint = uiEndpoint.MapGroup(typeName);
-            await FillTypeEndpoint(typeEndpoint, applicationSetup, ig, dbPath, idProperty, columns, createDocument, listDocuments);
-            return typeName;
-        }
+        //public static async Task<string> UseDocs<T>(
+        //    this IEndpointRouteBuilder uiEndpoint,
+        //    ApplicationSetup applicationSetup,
+        //    ImplementationGroup ig,
+        //    string dbPath,
+        //    System.Linq.Expressions.Expression<Func<T, string>> idProperty,
+        //    List<string> columns,
+        //    Func<CommandContext, Task<T>> createDocument,
+        //    Func<CommandContext, Task<List<T>>> listDocuments = null)
+        //{
+        //    var typeName = typeof(T).Name;
+        //    var typeEndpoint = uiEndpoint.MapGroup(typeName);
+        //    await FillTypeEndpoint(typeEndpoint, applicationSetup, ig, dbPath, idProperty, columns, createDocument, listDocuments);
+        //    return typeName;
+        //}
 
         public static void Render<TModel>(this IEndpointRouteBuilder uiEndpoint, System.Action<HtmlBuilder, TModel> buildPage)
         {

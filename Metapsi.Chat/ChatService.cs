@@ -19,7 +19,10 @@ public static class ChatServiceExtensions
         ImplementationGroup ig,
         string dbPath)
     {
-        var overviewRoute = await endpoint.UseDocsGroup(applicationSetup, ig, dbPath,
+        var overviewRoute = await endpoint.UseDocs(
+            applicationSetup, 
+            ig, 
+            dbPath,
             b =>
             {
                 b.AddDoc<Conversation>(x => x.Id, async (cc) => new Conversation());

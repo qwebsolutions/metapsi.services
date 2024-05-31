@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+	</PropertyGroup>
+
+	<Import Condition="'$(Configuration)' == 'Debug'" Project="../paths.target" />
+
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Heroicons\Metapsi.Heroicons.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Shoelace\Metapsi.Shoelace.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Hyperapp\Metapsi.Hyperapp.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Web\Metapsi.Web.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.Messaging\Metapsi.Messaging.csproj" />
+		<ProjectReference Include="$(MetapsiPath)\Metapsi.SQLite\Metapsi.SQLite.csproj" />
+	</ItemGroup>
+
+
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<PackageReference Include="Metapsi.Heroicons" Version="*" />
+		<PackageReference Include="Metapsi.Shoelace" Version="*" />
+		<PackageReference Include="Metapsi.SQLite" Version="*" />
+		<PackageReference Include="Metapsi.Web" Version="*" />
+		<PackageReference Include="Metapsi.Messaging" Version="*" />
+		<PackageReference Include="Metapsi.Hyperapp" Version="*" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<EmbeddedResource Include="embedded\Metapsi.SignIn.css" LogicalName="Metapsi.SignIn.css" />
+	</ItemGroup>
+
+</Project>
