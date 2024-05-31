@@ -152,7 +152,8 @@ namespace Metapsi.Html
                     b.SetClass("text-left text-sm text-gray-500 bg-white drop-shadow-sm");
                 },
                 SetThProps = (b, column) => b.SetClass("py-4 border-b border-gray-300 bg-white"),
-                SetTdProps = (b, row, column) => b.SetClass("py-4 border-b border-gray-300")
+                SetTdProps = (b, row, column) => b.SetClass("py-4 border-b border-gray-300"),
+                SetTbodyProps = (b) => b.SetClass("break-all")
             };
         }
 

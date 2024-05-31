@@ -18,7 +18,7 @@ namespace Metapsi
 {
     public static partial class ServiceDoc
     {
-        public class Config
+        public class GroupConfig
         {
             internal List<Task> registerDocs = new();
             internal List<Func<CommandContext, HttpContext, Task<DocTypeOverview>>> getOverview = new();
@@ -32,7 +32,7 @@ namespace Metapsi
             {
                 if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
 
-                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, createDocument, listDocuments));
+                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, DataTable.GetColumns<T>(), createDocument, listDocuments));
                 getOverview.Add(async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
@@ -48,13 +48,30 @@ namespace Metapsi
                     };
                 });
             }
+
+            public void AddDoc<T>(Expression<Func<T, string>> idProperty, Action<DocumentProps<T>> setProps)
+                where T : new()
+            {
+                DocumentProps<T> docProps = new DocumentProps<T>() { IdProperty = idProperty };
+                setProps(docProps);
+                if (docProps.Create == null) docProps.Create = async (cc) => new T();
+                if (docProps.List == null) docProps.List = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
+
+                registerDocs.Add(uiEndpoint.UseDocs<T>(applicationSetup, ig, dbPath, idProperty, docProps.TableColumns, docProps.Create, docProps.List));
+            }
         }
 
-        public class Props<T>
+        public static void ShowColumns<T>(this DocumentProps<T> b, params string[] columnNames)
+        {
+            b.TableColumns = columnNames.ToList();
+        }
+
+        public class DocumentProps<T>
         {
             public System.Linq.Expressions.Expression<Func<T, string>> IdProperty { get; set; }
             public Func<CommandContext, Task<T>> Create { get; set; }
             public Func<CommandContext, Task<List<T>>> List { get; set; }
+            public List<string> TableColumns { get; set; } = DataTable.GetColumns<T>();
         }
 
         public static Request<T> InitDocument<T>() => new Request<T>(nameof(InitDocument));
@@ -65,9 +82,9 @@ namespace Metapsi
             ApplicationSetup applicationSetup,
             ImplementationGroup ig,
             string dbPath,
-            Action<Config> setProps)
+            Action<GroupConfig> setProps)
         {
-            var propsConfigurator = new Config()
+            var propsConfigurator = new GroupConfig()
             {
                 applicationSetup = applicationSetup,
                 dbPath = dbPath,
@@ -104,12 +121,13 @@ namespace Metapsi
             ImplementationGroup ig,
             string dbPath,
             System.Linq.Expressions.Expression<Func<T, string>> idProperty,
+            List<string> columns,
             Func<CommandContext, Task<T>> createDocument,
             Func<CommandContext, Task<List<T>>> listDocuments = null)
         {
             if (listDocuments == null) listDocuments = async (cc) => await cc.Do(ServiceDoc.GetDocApi<T>().List);
 
-            typeEndpoint.RegisterDocUiHandlers<T>();
+            typeEndpoint.RegisterDocUiHandlers<T>(columns);
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
             apiEndpoint.RegisterFrontendRestApi<T>();
@@ -141,12 +159,13 @@ namespace Metapsi
             ImplementationGroup ig,
             string dbPath,
             System.Linq.Expressions.Expression<Func<T, string>> idProperty,
+            List<string> columns,
             Func<CommandContext, Task<T>> createDocument,
             Func<CommandContext, Task<List<T>>> listDocuments = null)
         {
             var typeName = typeof(T).Name;
             var typeEndpoint = uiEndpoint.MapGroup(typeName);
-            await FillTypeEndpoint(typeEndpoint, applicationSetup, ig, dbPath, idProperty, createDocument, listDocuments);
+            await FillTypeEndpoint(typeEndpoint, applicationSetup, ig, dbPath, idProperty, columns, createDocument, listDocuments);
             return typeName;
         }
 

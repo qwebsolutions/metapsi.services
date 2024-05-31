@@ -22,6 +22,7 @@ namespace Metapsi
             public List<T> Documents { get; set; } = new List<T>();
             public T EditDocument { get; set; }
             public string SummaryHtml { get; set; }
+            public List<string> Columns { get; set; } = new List<string>();
         }
 
         private const string IdEditDocument = "id-edit-document";
@@ -144,20 +145,17 @@ namespace Metapsi
             var isNew = b.Get(model, getId, (model, getId) => model.EditDocument == null || !model.Documents.Any(x => getId(x) == getId(model.EditDocument)));
             var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
 
-            var buildContent = (LayoutBuilder b) =>
-            b.HtmlDiv(
+            var buildContent = (LayoutBuilder b) => b.AutoEditForm(model, b.Get(model, x => x.EditDocument));
+            return b.SlDialog(
                 b =>
                 {
-                    b.SetClass("flex flex-col gap-4");
+                    b.SetId(b.Const(IdEditDocument));
+                    b.SetLabel(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))));
                 },
-                b.AutoEditForm(model, b.Get(model, x => x.EditDocument)),
-                b.HtmlDiv(
-                    b =>
-                    {
-                        // To make the buttons smaller at end
-                        b.AddClass("flex flex-row gap-2 justify-end");
-                    },
-                    b.SlButton(
+                b.Optional(
+                    b.HasObject(b.Get(model, x => x.EditDocument)),
+                    b => b.Call(buildContent)),
+                b.SlButton(
                         b =>
                         {
                             b.SetSlot("footer");
@@ -168,18 +166,7 @@ namespace Metapsi
                                 return SaveDocument(b, model);
                             }));
                         },
-                        b.Text("Save")))
-                );
-
-            return b.SlDialog(
-                b =>
-                {
-                    b.SetId(b.Const(IdEditDocument));
-                    b.SetLabel(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))));
-                },
-                b.Optional(
-                    b.HasObject(b.Get(model, x => x.EditDocument)),
-                    b => b.Call(buildContent)));
+                        b.Text("Save")));
         }
 
 
@@ -250,7 +237,7 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
+                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                 {
                     b.GetJson<T>(b.GetApiUrl(model, b.Const(ServiceDoc.InitDocument<T>().Name)),
                         b.Def((SyntaxBuilder b, Var<T> newDocument) =>
@@ -292,7 +279,7 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
+                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                 {
                     b.PostJson(b.GetApiUrl(model),
                         b.Get(model, x => x.EditDocument),
@@ -344,7 +331,7 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
+                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                 {
                     var documentId = b.Call(getId, b.Get(model, x => x.EditDocument));
                     var url = b.GetApiUrl(model, documentId);
@@ -385,7 +372,7 @@ namespace Metapsi
 
                 return b.MakeStateWithEffects(
                     model,
-                    (SyntaxBuilder b, Var<HyperType.Dispatcher<ListDocsPage<T>>> dispatch) =>
+                    (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                     {
                         b.GetJson<List<T>>(b.GetApiUrl(model, b.Const(ServiceDoc.ListDocuments<T>().Name)),
                             b.Def((SyntaxBuilder b, Var<List<T>> newList) =>
@@ -441,7 +428,10 @@ namespace Metapsi
                     }));
         }
 
-        public static Var<IVNode> DocsGrid<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model, Expression<Func<T, string>> idProperty)
+        public static Var<IVNode> DocsGrid<T>(
+            this LayoutBuilder b, 
+            Var<ListDocsPage<T>> model, 
+            Expression<Func<T, string>> idProperty)
         {
             return
                 b.HtmlDiv(
@@ -456,7 +446,7 @@ namespace Metapsi
                             var gridBuilder = DataGridBuilder.DataGrid<T>();
                             gridBuilder.AddRowAction((b, item) => b.EditDocumentButton(item, idProperty));
                             gridBuilder.AddRowAction((b, item) => b.DeleteDocumentButton(item, idProperty));
-                            return b.DataGrid(gridBuilder, b.Get(model, x => x.Documents));
+                            return b.DataGrid(gridBuilder, b.Get(model, x => x.Documents), b.Get(model, x => x.Columns));
                         },
                         b =>
                         {

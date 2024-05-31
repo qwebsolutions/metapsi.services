@@ -249,7 +249,8 @@ public static partial class ServiceDoc
     }
 
     public static void RegisterDocUiHandlers<T>(
-        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder typeEndpoint)
+        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder typeEndpoint,
+        List<string> columns)
     {
         typeEndpoint.MapGet("list", async (CommandContext commandContext, HttpContext httpContext) =>
         {
@@ -281,7 +282,8 @@ public static partial class ServiceDoc
                 {
                     ApiBase = apiBase,
                     Documents = list,
-                    SummaryHtml = summaryHtml
+                    SummaryHtml = summaryHtml,
+                    Columns = columns
                 });
         }).AllowAnonymous();
         typeEndpoint.MapGet("/", (HttpContext httpContext) =>
