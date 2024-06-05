@@ -7,11 +7,13 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Builder;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Metapsi.WhatsApp;
 
 public class WhatsAppConfiguration
 {
+    public HttpClient HttpClient { get; set; } = new HttpClient();
     public string WhatsappBearerToken { get; set; }
     public string WhatsappAppSecret { get; set; }
     public string WhatsappBusinessNumber { get; set; }
@@ -22,7 +24,7 @@ public class WebHookConfiguration
 {
     public string WhatsAppAppSecret { get; set; }
     public List<Func<WhatsappApiMessage, object>> ContractConverters { get; set; } = new();
-    public Func<object, Task> OnMessage { get; set; }
+    public Func<CommandContext, object, Task> OnMessage { get; set; }
 }
 
 public static class WhatsAppExtensions
@@ -51,9 +53,9 @@ public static class WhatsAppExtensions
     }
 
     public static void UseWhatsApp(
-        this IEndpointRouteBuilder endpoint, 
-        WhatsAppConfiguration configuration, 
-        Func<object, Task> onMessage,
+        this IEndpointRouteBuilder endpoint,
+        WhatsAppConfiguration configuration,
+        Func<CommandContext, object, Task> onMessage,
         Action<WebHookConfiguration> configureWebHook = null)
     {
         WebHookConfiguration webHookConfiguration = new WebHookConfiguration();
@@ -66,20 +68,45 @@ public static class WhatsAppExtensions
         {
             configureWebHook(webHookConfiguration);
         }
+        var webhookEndpoint = endpoint.MapGroup("webhook");
+        var webHookRoute = webhookEndpoint.UseWhatsAppWebHook(webHookConfiguration);
+        webHookRoute.WithName("webhook");
+        
+        var postEndpoint = endpoint.MapGroup("postmessage");
+        
+        var textMessagesRoute = postEndpoint.MapPostMessage<WhatsAppOutboundTextMessage>(configuration);
+        textMessagesRoute.WithName($"post-{nameof(WhatsAppOutboundTextMessage)}");
 
-        endpoint.UseWhatsAppWebHook(webHookConfiguration);
-        var postEndpoint = endpoint.MapGroup("postmesage");
-        postEndpoint.MapPostMessage<WhatsAppOutboundTextMessage>(configuration);
-        postEndpoint.MapPostMessage<WhatsAppOutboundListMessage>(configuration);
-        postEndpoint.MapPostMessage<WhatsAppOutboundButtonMessage>(configuration);
+        var buttonRoute = postEndpoint.MapPostMessage<WhatsAppOutboundButtonMessage>(configuration);
+        buttonRoute.WithName($"post-{nameof(WhatsAppOutboundButtonMessage)}");
+
+        var listRoute = postEndpoint.MapPostMessage<WhatsAppOutboundListMessage>(configuration);
+        listRoute.WithName($"post-{nameof(WhatsAppOutboundListMessage)}");
+
+        endpoint.MapGet("/", async (CommandContext commandContext, HttpContext httpContext) =>
+        {
+            var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
+            var webhookUrl = linkGenerator.GetPathByName(httpContext, $"webhook");
+            var postTextUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundTextMessage).Name}");
+            var postButtonUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundButtonMessage).Name}");
+            var postListUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundListMessage).Name}");
+
+            return Results.Ok(new
+            {
+                WebhookPath = webhookUrl,
+                PostWhatsAppTextMessagePath = postTextUrl,
+                PostWhatsAppButtonMessagePath = postButtonUrl,
+                PostWhatsAppListMessagePath = postListUrl
+            });
+        });
     }
 
-    public static void MapPostMessage<T>(
+    public static RouteHandlerBuilder MapPostMessage<T>(
         this IEndpointRouteBuilder postGroup,
         WhatsAppConfiguration configuration)
         where T : IWhatsAppOutboundMessage
     {
-        postGroup.MapPost($"/{typeof(T).Name}", async (CommandContext commandContext, HttpContext httpContext, T message) =>
+        return postGroup.MapPost($"/{typeof(T).Name}", async (CommandContext commandContext, HttpContext httpContext, T message) =>
         {
             var result = await PostMessage(message, configuration);
 
@@ -102,8 +129,7 @@ public static class WhatsAppExtensions
         request.Headers.Add("Authorization", "Bearer " + configuration.WhatsappBearerToken);
         request.Content = JsonContent.Create(message);
 
-        var httpClient = new HttpClient();
-        var postResult = await httpClient.SendAsync(request);
+        var postResult = await configuration.HttpClient.SendAsync(request);
 
         var resultBody = await postResult.Content.ReadAsStringAsync();
         Console.WriteLine(resultBody);

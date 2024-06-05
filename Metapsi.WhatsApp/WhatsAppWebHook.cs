@@ -12,7 +12,7 @@ namespace Metapsi.WhatsApp;
 
 public static class WhatsAppWebHook
 {
-    public static void UseWhatsAppWebHook(
+    public static RouteHandlerBuilder UseWhatsAppWebHook(
         this IEndpointRouteBuilder endpoint,
         WebHookConfiguration configuration)
     {
@@ -22,7 +22,7 @@ public static class WhatsAppWebHook
             await httpContext.Response.WriteAsync(challenge.First());
         });
 
-        endpoint.MapPost("/", async (CommandContext commandContext, HttpContext httpContext) =>
+        return endpoint.MapPost("/", async (CommandContext commandContext, HttpContext httpContext) =>
         {
             string body = await new StreamReader(httpContext.Request.Body).ReadToEndAsync();
 
@@ -41,7 +41,7 @@ public static class WhatsAppWebHook
 
             if (message != null)
             {
-                await configuration.OnMessage(message);
+                await configuration.OnMessage(commandContext, message);
             }
             else
             {
