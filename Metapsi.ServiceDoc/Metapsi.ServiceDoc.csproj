@@ -11,7 +11,6 @@
 		<ProjectReference Include="$(MetapsiPath)\Metapsi.Shoelace\Metapsi.Shoelace.csproj" />
 		<ProjectReference Include="$(MetapsiPath)\Metapsi.Hyperapp\Metapsi.Hyperapp.csproj" />
 		<ProjectReference Include="$(MetapsiPath)\Metapsi.Web\Metapsi.Web.csproj" />
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.Messaging\Metapsi.Messaging.csproj" />
 		<ProjectReference Include="$(MetapsiPath)\Metapsi.SQLite\Metapsi.SQLite.csproj" />
 	</ItemGroup>
 
@@ -21,7 +20,6 @@
 		<PackageReference Include="Metapsi.Shoelace" Version="*" />
 		<PackageReference Include="Metapsi.SQLite" Version="*" />
 		<PackageReference Include="Metapsi.Web" Version="*" />
-		<PackageReference Include="Metapsi.Messaging" Version="*" />
 		<PackageReference Include="Metapsi.Hyperapp" Version="*" />
 	</ItemGroup>
 

@@ -31,7 +31,7 @@ namespace Metapsi
         internal static void Render<T>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, string>> idProperty)
         {
             b.AddStylesheet();
-            b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
+            //b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
             b.BodyAppend(b.Hyperapp(model,
                 (b, model) =>
                 {
@@ -104,36 +104,42 @@ namespace Metapsi
             var rows = b.Get(model, x => x.Documents);
 
             return b.HtmlDiv(
-                b.HtmlDiv(
-                    b =>
-                    {
-                        b.SetClass("flex relative flex-row items-center justify-center py-4 text-lg bg-gray-100 text-gray-700");
-                    },
-                    b.Text(b.Concat(b.FormatLabel(b.Const(EntityName)), b.Const(" Service Overview"))),
-                    b.SlButton(
-                        b =>
-                        {
-                            b.SetVariantText();
-                            b.AddClass("absolute right-2 text-2xl ");//text-[color:var(--sl-color-primary-600)] hover:text-[color:var(--sl-color-primary-500)]
-
-                            b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
-                            {
-                                return InitDocument(b, model);
-                            }));
-                        },
-                        b.HtmlDiv(
-                            b =>
-                            {
-                                b.AddClass("flex w-6 h-6");
-                                b.SetInnerHtml(b.Const(Metapsi.Heroicons.Solid.PlusCircle));
-                                b.SetSlot("prefix");
-                            }))),
+                b.HtmlDiv(b => b.SetClass("h-16")),
                 b.Optional(
                     b.HasValue(b.Get(model, x => x.SummaryHtml)),
                     b => b.DocDescriptionPanel(b.Get(model, x => x.SummaryHtml))),
                 b.DocsGrid(model, idProperty),
+                b.PageHeader<T>(), // Added after content for Z layer
                 b.EditDocumentPopup(model, idProperty),
                 b.RemoveDocumentPopup<T>(idProperty));
+        }
+
+        public static Var<IVNode> PageHeader<T>(this LayoutBuilder b)
+        {
+            return b.HtmlDiv(
+                b =>
+                {
+                    b.SetClass("fixed top-0 left-0 right-0 h-16 flex flex-row items-center justify-center py-4 text-lg bg-gray-100 text-gray-700");
+                },
+                b.Text(b.Concat(b.FormatLabel(b.EntityName<T>()), b.Const(" Service Overview"))),
+                b.SlButton(
+                    b =>
+                    {
+                        b.SetVariantText();
+                        b.AddClass("absolute right-2 text-2xl ");//text-[color:var(--sl-color-primary-600)] hover:text-[color:var(--sl-color-primary-500)]
+
+                        b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                        {
+                            return InitDocument(b, model);
+                        }));
+                    },
+                    b.HtmlDiv(
+                        b =>
+                        {
+                            b.AddClass("flex w-6 h-6");
+                            b.SetInnerHtml(b.Const(Metapsi.Heroicons.Solid.PlusCircle));
+                            b.SetSlot("prefix");
+                        })));
         }
 
         public static Var<IVNode> EditDocumentPopup<T>(
@@ -446,13 +452,65 @@ namespace Metapsi
                             var gridBuilder = DataGridBuilder.DataGrid<T>();
                             gridBuilder.AddRowAction((b, item) => b.EditDocumentButton(item, idProperty));
                             gridBuilder.AddRowAction((b, item) => b.DeleteDocumentButton(item, idProperty));
-                            return b.DataGrid(gridBuilder, b.Get(model, x => x.Documents), b.Get(model, x => x.Columns));
+                            var dataGrid = b.DataGrid(gridBuilder, b.Get(model, x => x.Documents), b.Get(model, x => x.Columns));
+
+                            return b.HtmlDiv(
+                                b.HtmlDiv(
+                                    b =>
+                                    {
+                                        b.SetClass("hidden md:block");
+                                    },
+                                    dataGrid),
+                                b.HtmlDiv(
+                                    b =>
+                                    {
+                                        b.SetClass("flex flex-col gap-2 md:hidden");
+                                    },
+                                    b.Map(b.Get(model, x => x.Documents), (b, document) =>
+                                    {
+                                        return b.SlCard(
+                                            b.HtmlDiv(
+                                                b =>
+                                                {
+                                                    b.SetClass("flex flex-col gap-2");
+                                                },
+                                                b.Map(
+                                                    b.Get(model, x => x.Columns),
+                                                    (b, column) =>
+                                                    {
+                                                        return b.HtmlDiv(
+                                                            b =>
+                                                            {
+                                                                b.SetClass("flex flex-col");
+                                                            },
+                                                            b.HtmlSpanText(
+                                                                b =>
+                                                                {
+                                                                    b.SetClass("text-sm text-gray-600");
+                                                                },
+                                                                column),
+                                                            b.HtmlSpanText(
+                                                                b =>
+                                                                {
+                                                                    b.SetClass("text-gray-800");
+                                                                },
+                                                                b.GetProperty<string>(document, column)));
+                                                    })),
+                                            b.HtmlDiv(
+                                                b =>
+                                                {
+                                                    b.SetClass("flex flex-row items-center justify-end gap-2 pt-2");
+                                                },
+                                                b.EditDocumentButton<T>(document, idProperty),
+                                                b.DeleteDocumentButton<T>(document, idProperty)));
+                                    })));
                         },
                         b =>
                         {
                             return b.Text("There are no documents to display. Create some to see them here");
                         }));
         }
+
 
         public static Var<IVNode> EditDocumentButton<T>(this LayoutBuilder b, Var<T> document, Expression<Func<T, string>> IdProperty)
         {
