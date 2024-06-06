@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Text.RegularExpressions;
+using Metapsi.Html;
 
 namespace Metapsi.Services.Tests;
 
@@ -52,14 +53,21 @@ public class UnitTest1
             serviceSetup.ApplicationSetup,
             ig,
             configurationDb,
-            (x) => x.Key,
-            createDocument: async (cc) => new TestEntity()
+            b =>
             {
-                Key = Guid.NewGuid().ToString(),
-                Notes = "Manually edited in " + serviceSetup.ServiceName
+                b.AddDoc<TestEntity>(
+                    x => x.Key,
+                    b =>
+                    {
+                        b.Create = async (cc) => new TestEntity()
+                        {
+                            Key = Guid.NewGuid().ToString(),
+                            Notes = "Manually edited in " + serviceSetup.ServiceName
+                        };
+                    });
             });
 
-        app.MapGet("/", () => Results.Redirect(configurationUrl)).AllowAnonymous().ExcludeFromDescription();
+        //app.MapGet("/", () => Results.Redirect(configurationUrl)).AllowAnonymous().ExcludeFromDescription();
     }
 
     [TestMethod]
@@ -84,14 +92,21 @@ public class UnitTest1
             applicationSetup,
             ig,
             chatDbPath,
-            (x) => x.Key,
-            createDocument: async (cc) =>
+            b =>
             {
-                var list = await cc.Do(ServiceDoc.GetDocApi<ConfigurationParameter>().List);
-                return new ConfigurationParameter()
-                {
-                    Key = list.Count.ToString()
-                };
+                b.AddDoc<ConfigurationParameter>(
+                    x => x.Key,
+                    b =>
+                    {
+                        b.Create = async (cc) =>
+                        {
+                            var list = await cc.Do(ServiceDoc.GetDocApi<ConfigurationParameter>().List);
+                            return new ConfigurationParameter()
+                            {
+                                Key = list.Count.ToString()
+                            };
+                        };
+                    });
             });
 
         webApp.MapGet("/", (HttpContext httpContext) =>
