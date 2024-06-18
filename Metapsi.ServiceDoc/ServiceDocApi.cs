@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -71,6 +72,17 @@ public static partial class ServiceDoc
     public static Request<List<T>> Get<T, TProp>(this DocApi<T> docApi, System.Linq.Expressions.Expression<Func<T, TProp>> byProperty)
     {
         return new Request<List<T>>($"Get{typeof(T).Name}By{byProperty.PropertyName()}");
+    }
+
+    public static Request<string> GetDbPath<T>(this DocApi<T> docApi)
+    {
+        return new Request<string>($"GetDbPath{typeof(T).Name}");
+    }
+
+    public static async Task<List<T>> Query<T>(this CommandContext commandContext, Func<OpenTransaction, Task<List<T>>> dbQuery)
+    {
+        var dbPath = await commandContext.Do(GetDocApi<T>().GetDbPath());
+        return await Db.WithRollback(dbPath, dbQuery);
     }
 
     public static async Task RegisterDocBackendApi<T>(
@@ -211,48 +223,60 @@ public static partial class ServiceDoc
                     return await transaction.Connection.ExecuteScalarAsync<int>($"select count (1) from {TableName<T>()}");
                 });
         });
+
+        ig.MapRequest(GetDocApi<T>().GetDbPath(), async (rc) =>
+        {
+            return sqliteDbFullPath;
+        });
     }
 
     public static void RegisterFrontendRestApi<T>(
-        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint)
+        this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint,
+        DocsGroup docsGroup,
+        DocumentProps<T> documentProps)
     {
         var docApi = GetDocApi<T>();
 
-        endpoint.MapGet(
+        var listRoute = endpoint.MapGet(
             "/",
             async (CommandContext commandContext, HttpContext httpContext) =>
             {
                 return await commandContext.Do(docApi.List);
             }).WithMetadata(new EndpointNameAttribute($"api-{typeof(T).Name}"));
+        ConfigureApiRoute(listRoute);
 
-        endpoint.MapGet(
+        var getRoute = endpoint.MapGet(
             "/{id}",
             async (CommandContext commandContext, HttpContext httpContext, string id) =>
             {
                 return await commandContext.Do(docApi.Get, id) is T item ? Results.Ok(item) : Results.NotFound();
             });
+        ConfigureApiRoute(getRoute);
 
-        endpoint.MapPost(
+        var saveRoute = endpoint.MapPost(
             "/",
             async (CommandContext commandContext, HttpContext httpContext, T item) =>
             {
                 return await commandContext.Do(docApi.Save, item);
             });
+        ConfigureApiRoute(saveRoute);
 
-        endpoint.MapDelete(
+        var deleteRoute = endpoint.MapDelete(
             "/{id}",
             async (CommandContext commandContext, HttpContext httpContext, string id) =>
             {
                 var deleteResult = await commandContext.Do(docApi.Delete, id);
                 return deleteResult.Doc is T item ? Results.Ok(item) : Results.NotFound();
             });
+        ConfigureApiRoute(deleteRoute);
     }
 
     public static void RegisterDocUiHandlers<T>(
         this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder typeEndpoint,
+        DocsGroup docsGroup,
         DocumentProps<T> props)
     {
-        typeEndpoint.MapGet("list", async (CommandContext commandContext, HttpContext httpContext) =>
+        var listRoute = typeEndpoint.MapGet("list", async (CommandContext commandContext, HttpContext httpContext) =>
         {
             var list = await commandContext.Do(GetDocApi<T>().List);
 
@@ -285,7 +309,10 @@ public static partial class ServiceDoc
                     SummaryHtml = summaryHtml,
                     Columns = props.TableColumns
                 });
-        }).AllowAnonymous();
+        });
+
+        ConfigureRoute(listRoute, docsGroup, props);
+
         typeEndpoint.MapGet("/", (HttpContext httpContext) =>
         {
             return Results.Redirect(httpContext.Request.Path + "/list");

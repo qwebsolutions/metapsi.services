@@ -2,6 +2,9 @@
 using Metapsi.Hyperapp;
 using Metapsi.Shoelace;
 using Metapsi.Syntax;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +32,8 @@ namespace Metapsi
             internal ApplicationSetup applicationSetup { get; set; }
             internal ImplementationGroup ig { get; set; }
             internal string dbPath { get; set; }
+
+            public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
         }
 
         public class DocumentProps<T>
@@ -37,6 +42,7 @@ namespace Metapsi
             public Func<CommandContext, Task<T>> Create { get; set; }
             public Func<CommandContext, Task<List<T>>> List { get; set; }
             public List<string> TableColumns { get; set; } = DataTable.GetColumns<T>();
+            public Action<RouteHandlerBuilder> DocumentRoutesBuilder { get; set; }
         }
 
         public static void AddDoc<T>(
@@ -94,6 +100,15 @@ namespace Metapsi
             b.TableColumns = columnNames.ToList();
         }
 
+        public static void ConfigureGroupRoutes(this DocsGroup docsGroup, Action<RouteHandlerBuilder> builder)
+        {
+            docsGroup.GroupRoutesBuilder = builder;
+        }
+
+        public static void ConfigureDocumentRoutes<T>(this DocumentProps<T> b, Action<RouteHandlerBuilder> builder)
+        {
+            b.DocumentRoutesBuilder = builder;
+        }
 
         public static Request<T> InitDocument<T>() => new Request<T>(nameof(InitDocument));
         public static Request<List<T>> ListDocuments<T>() => new Request<List<T>>(nameof(ListDocuments));
@@ -120,8 +135,6 @@ namespace Metapsi
                 await task;
             }
 
-            var groupName = Guid.NewGuid();
-
             uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
             var docsRoute = uiEndpoint.MapGet("/docs", async (CommandContext commandContext, HttpContext httpContext) =>
             {
@@ -133,6 +146,12 @@ namespace Metapsi
 
                 return Page.Result(docsOverviewModel);
             });
+
+            if (propsConfigurator.GroupRoutesBuilder != null)
+            {
+                propsConfigurator.GroupRoutesBuilder(docsRoute);
+            }
+
             return docsRoute;
         }
 
@@ -141,10 +160,10 @@ namespace Metapsi
             DocsGroup docsGroup,
             DocumentProps<T> documentProps)
         {
-            typeEndpoint.RegisterDocUiHandlers<T>(documentProps);
+            typeEndpoint.RegisterDocUiHandlers<T>(docsGroup, documentProps);
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
-            apiEndpoint.RegisterFrontendRestApi<T>();
+            apiEndpoint.RegisterFrontendRestApi<T>(docsGroup, documentProps);
 
             await docsGroup.applicationSetup.RegisterDocBackendApi<T>(docsGroup.ig, docsGroup.dbPath, documentProps.IdProperty);
 
@@ -152,19 +171,38 @@ namespace Metapsi
 
             var noActualState = docsGroup.applicationSetup.AddBusinessState(new object());
 
-            apiEndpoint.MapGet(
+            var initRoute = apiEndpoint.MapGet(
                 InitDocument<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await documentProps.Create(commandContext);
-                }).AllowAnonymous();
+                });
 
-            apiEndpoint.MapGet(
+            var listRoute = apiEndpoint.MapGet(
                 ListDocuments<T>().Name,
                 async (CommandContext commandContext, HttpContext httpContext) =>
                 {
                     return await documentProps.List(commandContext);
-                }).AllowAnonymous();
+                });
+
+            if (documentProps.DocumentRoutesBuilder == null)
+            {
+                if (docsGroup.GroupRoutesBuilder == null)
+                {
+                    initRoute.AllowAnonymous();
+                    listRoute.AllowAnonymous();
+                }
+                else
+                {
+                    docsGroup.GroupRoutesBuilder(initRoute);
+                    docsGroup.GroupRoutesBuilder(listRoute);
+                }
+            }
+            else
+            {
+                documentProps.DocumentRoutesBuilder(initRoute);
+                documentProps.DocumentRoutesBuilder(listRoute);
+            }
         }
 
         //public static async Task<string> UseDocs<T>(
@@ -189,6 +227,34 @@ namespace Metapsi
             {
                 var document = HtmlBuilder.FromDefault(b => buildPage(b, model));
                 return document.ToHtml();
+            });
+        }
+
+        private static void ConfigureRoute<T>(RouteHandlerBuilder route, DocsGroup docsGroup, DocumentProps<T> documentProps)
+        {
+            if (documentProps.DocumentRoutesBuilder == null)
+            {
+                if (docsGroup.GroupRoutesBuilder == null)
+                {
+                    route.AllowAnonymous();
+                }
+                else
+                {
+                    docsGroup.GroupRoutesBuilder(route);
+                }
+            }
+            else
+            {
+                documentProps.DocumentRoutesBuilder(route);
+            }
+        }
+
+        private static void ConfigureApiRoute(RouteHandlerBuilder route)
+        {
+            route.RequireAuthorization(options =>
+            {
+                options.AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme);
+                options.RequireAuthenticatedUser();
             });
         }
     }

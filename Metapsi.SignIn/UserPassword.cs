@@ -10,44 +10,82 @@ using Microsoft.AspNetCore.Builder;
 using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using System;
+using System.Threading.Tasks;
+using System.Linq;
+using System.Reflection;
 
 namespace Metapsi;
 
 public class SignInUserPasswordModel
 {
-    public string LogoUrl { get; set; }
-    public string SignInFormTitle { get; set; }
-    public string SignInFormSubtitle { get; set; }
-    public string UserNameLabel { get; set; }
-    public string PasswordLabel { get; set; }
-    public string SignInButtonLabel { get; set; }
-    public string SignInUrl { get; set; } = "/sign-in";
+    public string LogoUrl { get; set; } = string.Empty;
+    public string SignInFormTitle { get; set; } = "Sign in to your account";
+    public string SignInFormSubtitle { get; set; } = string.Empty;
+    public string UserNameLabel { get; set; } = "User";
+    public string PasswordLabel { get; set; } = "Password";
+    public string SignInButtonLabel { get; set; } = "Sign in";
+    public string SignInPath { get; set; } = "/sign-in";
+}
+
+public class SignInServiceUserPasswordOptions
+{
+    public string SignInPath { get; set; } = "/sign-in";
+    public Func<HttpContext, Task<SignInUserPasswordModel>> LoadSignInPage { get; set; } = async (httpContext) => new SignInUserPasswordModel();
+    public Func<CommandContext, string, string, Task<List<Claim>>> LoadClaims { get; set; } = async (commandContext, user, password) => new List<Claim>();
+    public IResult SignInResult { get; set; } = Results.Redirect("/");
 }
 
 public static partial class SignInService
 {
-    public static void UseUserPasswordSignInPage(IEndpointRouteBuilder baseEndpoint)
+    public static void UseUserPasswordSignInPage(this IEndpointRouteBuilder baseEndpoint,
+        Action<SignInServiceUserPasswordOptions> configure = null)
     {
-        baseEndpoint.MapGet("/sign-in", () =>
+        var options = new SignInServiceUserPasswordOptions();
+
+        if (configure != null)
         {
-            return Page.Model(new SignInUserPasswordModel());
-        });
-        baseEndpoint.MapPost("/sign-in", async (HttpContext httpContext) =>
+            configure(options);
+        };
+
+        baseEndpoint.MapGet(options.SignInPath, async (CommandContext commandContext, HttpContext httpContext) =>
+        {
+            var model = await options.LoadSignInPage(httpContext);
+            model.SignInPath = options.SignInPath;
+            return Page.Model(model);
+        }).AllowAnonymous();
+
+        baseEndpoint.MapPost(options.SignInPath, async (CommandContext commandContext, HttpContext httpContext) =>
         {
             var userName = httpContext.Request.Form["id-user-name-input"];
             var password = httpContext.Request.Form["id-password-input"];
 
-            var claims = new List<Claim>
+            var claims = await options.LoadClaims(commandContext, userName, password);
+
+            if (claims != null)
+            {
+                if (claims.Any())
                 {
-                    new Claim(ClaimTypes.NameIdentifier, userName),
-                    new Claim(ClaimTypes.Name, userName)
-                };
+                    var identity = new ClaimsIdentity(claims, "cookie");
 
-            var identity = new ClaimsIdentity(claims, "OIDC");
+                    var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+                    await httpContext.SignInAsync(principal, new AuthenticationProperties()
+                    {
+                        IsPersistent = true
+                    });
+                    return options.SignInResult;
+                }
+            }
 
-            var principal = new System.Security.Claims.ClaimsPrincipal(identity);
-            await httpContext.SignInAsync(principal);
-            return Results.Redirect("/");
+            // Sign in failed, render page again
+            var model = await options.LoadSignInPage(httpContext);
+            return Page.Model(model);
+
+        }).AllowAnonymous();
+
+        baseEndpoint.UseRenderer<SignInUserPasswordModel>(model =>
+        {
+            return HtmlBuilder.FromDefault(b => SignInUserPasswordPage(b, model)).ToHtml();
         });
     }
 
@@ -55,6 +93,7 @@ public static partial class SignInService
     {
         b.AddModuleStylesheet();
         StaticFiles.AddAll(typeof(HyperType).Assembly);
+        StaticFiles.AddAll(typeof(SignInUserPasswordModel).Assembly);
 
         b.Document.Body.SetAttribute("class", "w-screen h-screen");
         b.BodyAppend(
@@ -106,9 +145,9 @@ public static partial class SignInService
                     b =>
                     {
                         b.SetAttribute("id", "id-sign-in-form");
-                        b.SetClass("flex flex-col items-center justify-center gap-6 w-full h-full");
+                        b.SetClass("flex flex-col items-center justify-center gap-6 w-full h-full max-w-96");
                         b.SetAttribute("method", "POST");
-                        b.SetAttribute("action", model.SignInUrl);
+                        b.SetAttribute("action", model.SignInPath);
                     },
                     b.HtmlDiv(
                         b =>
