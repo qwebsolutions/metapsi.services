@@ -23,6 +23,7 @@ namespace Metapsi
             public T EditDocument { get; set; }
             public string SummaryHtml { get; set; }
             public List<string> Columns { get; set; } = new List<string>();
+            public string FilterText { get; set; }
         }
 
         private const string IdEditDocument = "id-edit-document";
@@ -108,10 +109,33 @@ namespace Metapsi
                 b.Optional(
                     b.HasValue(b.Get(model, x => x.SummaryHtml)),
                     b => b.DocDescriptionPanel(b.Get(model, x => x.SummaryHtml))),
+                b.FilterBox(model),
                 b.DocsGrid(model, idProperty),
                 b.PageHeader<T>(), // Added after content for Z layer
                 b.EditDocumentPopup(model, idProperty),
                 b.RemoveDocumentPopup<T>(idProperty));
+        }
+
+        public static Var<IVNode> FilterBox<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
+        {
+            return b.HtmlDiv(
+                b =>
+                {
+                    b.SetClass("flex flex-row justify-end p-4");
+                },
+                b.SlInput(
+                    b =>
+                    {
+                        b.SetPill();
+                        b.SetClearable();
+                        b.BindTo(model, x => x.FilterText);
+                    },
+                    b.SlIcon(
+                        b =>
+                        {
+                            b.SetName("search");
+                            b.SetSlot(SlInput.Slot.Prefix);
+                        })));
         }
 
         public static Var<IVNode> PageHeader<T>(this LayoutBuilder b)
@@ -434,6 +458,26 @@ namespace Metapsi
                     }));
         }
 
+
+        public static Var<List<TItem>> FilterList<TItem>(
+            this SyntaxBuilder b,
+            Var<List<TItem>> list,
+            Var<string> value)
+        {
+            var filteredItems = b.Get(
+                list,
+                value,
+                b.Def<SyntaxBuilder, TItem, string, bool>(ContainsValue),
+                (all, value, filterFunc) => all.Where(x => filterFunc(x, value)).ToList());
+
+            return filteredItems;
+        }
+
+        public static Var<bool> ContainsValue<T>(this SyntaxBuilder b, Var<T> item, Var<string> value)
+        {
+            return b.Includes(b.ToLowercase(b.ConcatObjectValues(item)), b.ToLowercase(value));
+        }
+
         public static Var<IVNode> DocsGrid<T>(
             this LayoutBuilder b, 
             Var<ListDocsPage<T>> model, 
@@ -449,10 +493,12 @@ namespace Metapsi
                         b.Get(model, x => x.Documents.Any()),
                         b =>
                         {
+                            var filteredRows = b.FilterList(b.Get(model, x => x.Documents), b.Get(model, x => x.FilterText));
+
                             var gridBuilder = DataGridBuilder.DataGrid<T>();
                             gridBuilder.AddRowAction((b, item) => b.EditDocumentButton(item, idProperty));
                             gridBuilder.AddRowAction((b, item) => b.DeleteDocumentButton(item, idProperty));
-                            var dataGrid = b.DataGrid(gridBuilder, b.Get(model, x => x.Documents), b.Get(model, x => x.Columns));
+                            var dataGrid = b.DataGrid(gridBuilder, filteredRows, b.Get(model, x => x.Columns));
 
                             return b.HtmlDiv(
                                 b.HtmlDiv(
@@ -466,7 +512,7 @@ namespace Metapsi
                                     {
                                         b.SetClass("flex flex-col gap-2 md:hidden");
                                     },
-                                    b.Map(b.Get(model, x => x.Documents), (b, document) =>
+                                    b.Map(filteredRows, (b, document) =>
                                     {
                                         return b.SlCard(
                                             b.HtmlDiv(
