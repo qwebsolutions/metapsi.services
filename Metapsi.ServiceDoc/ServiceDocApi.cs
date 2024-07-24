@@ -68,6 +68,21 @@ public static partial class ServiceDoc
         };
     }
 
+    public static async Task<List<T>> ListDocs<T>(this CommandContext commandContext)
+    {
+        return await commandContext.Do(ServiceDoc.GetDocApi<T>().List);
+    }
+
+    public static async Task<T> GetDoc<T>(this CommandContext commandContext, string id)
+    {
+        return await commandContext.Do(ServiceDoc.GetDocApi<T>().Get, id);
+    }
+
+    public static async Task<SaveResult<T>> SaveDoc<T>(this CommandContext commandContext, T doc)
+    {
+        return await commandContext.Do(ServiceDoc.GetDocApi<T>().Save, doc);
+    }
+
     public static Request<List<T>> Get<T, TProp>(this DocApi<T> docApi, System.Linq.Expressions.Expression<Func<T, TProp>> byProperty)
     {
         return new Request<List<T>>($"Get{typeof(T).Name}By{byProperty.PropertyName()}");
