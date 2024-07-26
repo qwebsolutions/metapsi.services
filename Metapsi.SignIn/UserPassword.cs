@@ -34,6 +34,7 @@ public class SignInServiceUserPasswordOptions
     public Func<HttpContext, Task<SignInUserPasswordModel>> LoadSignInPage { get; set; } = async (httpContext) => new SignInUserPasswordModel();
     public Func<CommandContext, string, string, Task<List<Claim>>> LoadClaims { get; set; } = async (commandContext, user, password) => new List<Claim>();
     public IResult SignInResult { get; set; } = Results.Redirect("/");
+    public Action<HtmlBuilder> ModifyPage { get; set; } = (HtmlBuilder b) => { };
 }
 
 public static partial class SignInService
@@ -85,7 +86,11 @@ public static partial class SignInService
 
         baseEndpoint.UseRenderer<SignInUserPasswordModel>(model =>
         {
-            return HtmlBuilder.FromDefault(b => SignInUserPasswordPage(b, model)).ToHtml();
+            return HtmlBuilder.FromDefault(b =>
+            {
+                SignInUserPasswordPage(b, model);
+                options.ModifyPage(b);
+            }).ToHtml();
         });
     }
 
