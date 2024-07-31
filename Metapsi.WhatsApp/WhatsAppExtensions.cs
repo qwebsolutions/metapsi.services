@@ -58,8 +58,12 @@ public static class WhatsAppExtensions
         Func<CommandContext, object, Task> onMessage,
         Action<WebHookConfiguration> configureWebHook = null)
     {
-        WebHookConfiguration webHookConfiguration = new WebHookConfiguration();
-        webHookConfiguration.OnMessage = onMessage;
+        WebHookConfiguration webHookConfiguration = new WebHookConfiguration()
+        {
+            WhatsAppAppSecret = configuration.WhatsappAppSecret,
+            OnMessage = onMessage
+        };
+
         webHookConfiguration.AddContractConverter(IncomingTextMessage);
         webHookConfiguration.AddContractConverter(IncomingButtonReply);
         webHookConfiguration.AddContractConverter(IncomingListReply);
@@ -68,6 +72,7 @@ public static class WhatsAppExtensions
         {
             configureWebHook(webHookConfiguration);
         }
+
         var webhookEndpoint = endpoint.MapGroup("webhook");
         var webHookRoute = webhookEndpoint.UseWhatsAppWebHook(webHookConfiguration);
         webHookRoute.WithName("webhook");
