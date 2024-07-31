@@ -100,7 +100,10 @@ public static class WhatsAppExtensions
             var postTextUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundTextMessage).Name}");
             var postButtonUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundButtonMessage).Name}");
             var postListUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundListMessage).Name}");
-            var getMediaUrl = linkGenerator.GetPathByName(httpContext, "get-media");
+            var getMediaUrl = linkGenerator.GetPathByName("get-media", new RouteValueDictionary()
+            {
+                { "mediaId", "mediaId" }
+            });
 
             return Results.Ok(new
             {
