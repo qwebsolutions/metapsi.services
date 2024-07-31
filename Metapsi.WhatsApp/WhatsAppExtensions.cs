@@ -18,6 +18,12 @@ public class WhatsAppConfiguration
     public string WhatsappAppSecret { get; set; }
     public string WhatsappBusinessNumber { get; set; }
     public string WhatsappBusinessNumberId { get; set; }
+
+    public WhatsAppConfiguration()
+    {
+        // Really? Really?!?!
+        HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36");
+    }
 }
 
 public class WebHookConfiguration
@@ -155,7 +161,7 @@ public static class WhatsAppExtensions
 
             var getMediaContentRequest = new HttpRequestMessage(HttpMethod.Get, mediaUrl.url);
             getMediaContentRequest.Headers.Add("Authorization", "Bearer " + configuration.WhatsappBearerToken);
-
+            
             var getMediaContentResult = await configuration.HttpClient.SendAsync(getMediaContentRequest);
             getMediaContentResult.EnsureSuccessStatusCode();
 
