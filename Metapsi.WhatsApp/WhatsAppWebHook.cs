@@ -43,6 +43,8 @@ public static class WhatsAppWebHook
                 return Results.BadRequest();
             }
 
+            Console.WriteLine($"Decrypted message {body}");
+
             var apiMessage = ParseWithWarnings(commandContext, body);
 
             var message = configuration.ConvertMessage(apiMessage);
