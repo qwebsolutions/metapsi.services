@@ -26,6 +26,14 @@ public static class WhatsAppWebHook
         {
             string body = await new StreamReader(httpContext.Request.Body).ReadToEndAsync();
 
+            if (string.IsNullOrEmpty(body))
+            {
+                body = string.Empty;
+            }
+
+            Console.WriteLine("Incoming message body length:" + body.Length);
+            Console.WriteLine("WhatsAppSecretLength:" + configuration.WhatsAppAppSecret?.Length);
+
             var requestSignature = httpContext.Request.Headers["x-hub-signature-256"];
             var asciiEscapedBody = EncodeNonAsciiCharacters(body);
             var computedSignature = CalculateSignature(configuration.WhatsAppAppSecret, asciiEscapedBody);
