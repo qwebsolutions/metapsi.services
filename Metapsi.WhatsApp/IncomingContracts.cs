@@ -9,6 +9,16 @@ public class IncomingTextMessage
     public string Timestamp { get; set; } = DateTime.UtcNow.Roundtrip();
 }
 
+public class IncomingMediaMessage
+{
+    public string PhoneNumber { get; set; }
+    public string Caption { get; set; }
+    public string MediaId { get; set; }
+    public string FileName { get; set; }
+    public string MimeType { get; set; }
+    public string Timestamp { get; set; } = DateTime.UtcNow.Roundtrip();
+}
+
 public class IncomingButtonReplyMessage
 {
     public string PhoneNumber { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.IO;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using static System.Net.Mime.MediaTypeNames;
@@ -30,5 +31,16 @@ public static class WhatsAppClientExtensions
     public static async Task PostMessage(this WhatsAppClient client, string toPhoneNumber, string text)
     {
         await client.PostMessage(WhatsAppMessage.Text(toPhoneNumber, text));
+    }
+
+    public static async Task<byte[]> GetMedia(this WhatsAppClient client, string mediaId)
+    {
+        var getMediaUrl = client.BaseUrl.TrimEnd('/') + "/getmedia/" + mediaId;
+        var response = await client.HttpClient.GetAsync(getMediaUrl);
+        response.EnsureSuccessStatusCode();
+        using MemoryStream memoryStream = new MemoryStream();
+        await response.Content.CopyToAsync(memoryStream);
+        await memoryStream.FlushAsync();
+        return memoryStream.ToArray();
     }
 }

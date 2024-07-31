@@ -68,6 +68,7 @@ public static class WhatsAppExtensions
         webHookConfiguration.AddContractConverter(IncomingButtonReply);
         webHookConfiguration.AddContractConverter(IncomingListReply);
         webHookConfiguration.AddContractConverter(IncomingStatusUpdate);
+        webHookConfiguration.AddContractConverter(IncomingMediaMessage);
         if (configureWebHook != null)
         {
             configureWebHook(webHookConfiguration);
@@ -76,17 +77,21 @@ public static class WhatsAppExtensions
         var webhookEndpoint = endpoint.MapGroup("webhook");
         var webHookRoute = webhookEndpoint.UseWhatsAppWebHook(webHookConfiguration);
         webHookRoute.WithName("webhook");
-        
-        var postEndpoint = endpoint.MapGroup("postmessage");
-        
-        var textMessagesRoute = postEndpoint.MapPostMessage<WhatsAppOutboundTextMessage>(configuration);
+
+        var postMessageEndpoint = endpoint.MapGroup("postmessage");
+
+        var textMessagesRoute = postMessageEndpoint.MapPostMessage<WhatsAppOutboundTextMessage>(configuration);
         textMessagesRoute.WithName($"post-{nameof(WhatsAppOutboundTextMessage)}");
 
-        var buttonRoute = postEndpoint.MapPostMessage<WhatsAppOutboundButtonMessage>(configuration);
+        var buttonRoute = postMessageEndpoint.MapPostMessage<WhatsAppOutboundButtonMessage>(configuration);
         buttonRoute.WithName($"post-{nameof(WhatsAppOutboundButtonMessage)}");
 
-        var listRoute = postEndpoint.MapPostMessage<WhatsAppOutboundListMessage>(configuration);
+        var listRoute = postMessageEndpoint.MapPostMessage<WhatsAppOutboundListMessage>(configuration);
         listRoute.WithName($"post-{nameof(WhatsAppOutboundListMessage)}");
+
+        var getMediaEndpoint = endpoint.MapGroup("getmedia");
+        var getMediaRoute = getMediaEndpoint.MapGetMedia(configuration);
+        getMediaRoute.WithName("get-media");
 
         endpoint.MapGet("/", async (CommandContext commandContext, HttpContext httpContext) =>
         {
@@ -95,13 +100,15 @@ public static class WhatsAppExtensions
             var postTextUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundTextMessage).Name}");
             var postButtonUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundButtonMessage).Name}");
             var postListUrl = linkGenerator.GetPathByName(httpContext, $"post-{typeof(WhatsAppOutboundListMessage).Name}");
+            var getMediaUrl = linkGenerator.GetPathByName(httpContext, "get-media");
 
             return Results.Ok(new
             {
                 WebhookPath = webhookUrl,
                 PostWhatsAppTextMessagePath = postTextUrl,
                 PostWhatsAppButtonMessagePath = postButtonUrl,
-                PostWhatsAppListMessagePath = postListUrl
+                PostWhatsAppListMessagePath = postListUrl,
+                GetMediaPath = getMediaUrl
             });
         });
     }
@@ -124,6 +131,37 @@ public static class WhatsAppExtensions
         });
     }
 
+    public static RouteHandlerBuilder MapGetMedia(
+        this IEndpointRouteBuilder getMediaGroup,
+        WhatsAppConfiguration configuration)
+    {
+        return getMediaGroup.MapGet("/{mediaId}", async (CommandContext commandContext, HttpContext httpContext, string mediaId) =>
+        {
+            var getMediaUrlRequest = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://graph.facebook.com/v18.0/{mediaId}");
+            getMediaUrlRequest.Headers.Add("Authorization", "Bearer " + configuration.WhatsappBearerToken);
+
+            var getMediaUrlResult = await configuration.HttpClient.SendAsync(getMediaUrlRequest);
+            getMediaUrlResult.EnsureSuccessStatusCode();
+
+            var resultBody = await getMediaUrlResult.Content.ReadAsStringAsync();
+            Console.WriteLine(resultBody);
+
+            var mediaUrl = Metapsi.Serialize.FromJson<MediaUrl>(resultBody);
+
+            var getMediaContentRequest = new HttpRequestMessage(HttpMethod.Get, mediaUrl.url);
+            getMediaContentRequest.Headers.Add("Authorization", "Bearer " + configuration.WhatsappBearerToken);
+
+            var getMediaContentResult = await configuration.HttpClient.SendAsync(getMediaContentRequest);
+            getMediaContentResult.EnsureSuccessStatusCode();
+
+            httpContext.Response.Headers.ContentType = mediaUrl.mime_type;
+            await getMediaContentResult.Content.CopyToAsync(httpContext.Response.Body);
+            await httpContext.Response.Body.FlushAsync();
+        });
+    }
+
     public static async Task<WhatsappSendMessageResult> PostMessage<T>(
         T message,
         WhatsAppConfiguration configuration)
@@ -143,6 +181,51 @@ public static class WhatsAppExtensions
         return result;
     }
 
+    /*
+     * {
+   "object":"whatsapp_business_account",
+   "entry":[
+      {
+         "id":"111838255246355",
+         "changes":[
+            {
+               "value":{
+                  "messaging_product":"whatsapp",
+                  "metadata":{
+                     "display_phone_number":"15550685239",
+                     "phone_number_id":"112033771893883"
+                  },
+                  "contacts":[
+                     {
+                        "profile":{
+                           "name":"Calin Dobos"
+                        },
+                        "wa_id":"40726321476"
+                     }
+                  ],
+                  "messages":[
+                     {
+                        "from":"40726321476",
+                        "id":"wamid.HBgLNDA3MjYzMjE0NzYVAgASGBQzQTMxNDlCNDAwNTJEQ0Y5QTg2MAA=",
+                        "timestamp":"1722446559",
+                        "type":"image",
+                        "image":{
+                           "caption":"With caption",
+                           "mime_type":"image\/jpeg",
+                           "sha256":"vi4WyFgHw1qLCbB3QeSaU634eK2miyl74mHZMfnJ7sE=",
+                           "id":"821116500122343"
+                        }
+                     }
+                  ]
+               },
+               "field":"messages"
+            }
+         ]
+      }
+   ]
+}
+    
+*/
 
     public static object IncomingTextMessage(WhatsappApiMessage apiMessage)
     {
@@ -164,6 +247,56 @@ public static class WhatsAppExtensions
                         {
                             PhoneNumber = userPhone,
                             Text = messageText,
+                            Timestamp = offset.UtcDateTime.Roundtrip()
+                        };
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static object IncomingMediaMessage(WhatsappApiMessage apiMessage)
+    {
+        if (apiMessage.entry.FirstOrDefault() != null)
+        {
+            if (apiMessage.entry.First().changes.FirstOrDefault() != null)
+            {
+                if (apiMessage.entry.First().changes.First().value.messages.Any())
+                {
+                    var userMessage = apiMessage.entry.First().changes.First().value.messages.First();
+                    var businessPhoneNumber = apiMessage.entry.First().changes.First().value.metadata.display_phone_number;
+                    var userPhone = userMessage.from;
+                    MessageMedia messageMedia = null;
+                    if (userMessage.image != null)
+                    {
+                        messageMedia = userMessage.image;
+                    }
+                    else if (userMessage.video != null)
+                    {
+                        messageMedia = userMessage.video;
+                    }
+                    else if (userMessage.audio != null)
+                    {
+                        messageMedia = userMessage.audio;
+                    }
+                    else if (userMessage.document != null)
+                    {
+                        messageMedia = userMessage.document;
+                    }
+
+                    if (messageMedia != null)
+                    {
+                        var offset = DateTimeOffset.FromUnixTimeSeconds(long.Parse(userMessage.timestamp));
+
+                        return new IncomingMediaMessage()
+                        {
+                            PhoneNumber = userPhone,
+                            Caption = messageMedia.caption,
+                            MimeType = messageMedia.mime_type,
+                            FileName = messageMedia.filename,
+                            MediaId = messageMedia.id,
                             Timestamp = offset.UtcDateTime.Roundtrip()
                         };
                     }

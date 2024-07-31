@@ -72,6 +72,10 @@ public class WhatsappInboundMessage
     public string timestamp { get; set; }
     public string type { get; set; }
     public MessageText text { get; set; }
+    public MessageMedia image { get; set; }
+    public MessageMedia video { get; set; }
+    public MessageMedia audio { get; set; }
+    public MessageMedia document { get; set; }
     public InboundMessageContext context { get; set; } = new();
     public InboundInteractive interactive { get; set; }
 }
@@ -84,6 +88,15 @@ public class InboundMessageContext
 public class MessageText
 {
     public string body { get; set; }
+}
+
+public class MessageMedia
+{
+    public string filename { get; set; }
+    public string caption { get; set; }
+    public string mime_type { get; set; }
+    public string sha256 { get; set; }
+    public string id { get; set; }
 }
 
 public class InboundInteractive
@@ -280,5 +293,28 @@ public class WhatsappSendTextMessageResultId
     public string id { get; set; }
 }
 
+
+#endregion
+
+#region Get results
+
+/*{
+  "messaging_product": "whatsapp",
+  "url": "<URL>",
+  "mime_type": "<MIME_TYPE>",
+  "sha256": "<HASH>",
+  "file_size": "<FILE_SIZE>",
+  "id": "<MEDIA_ID>"
+}*/
+
+public class MediaUrl
+{
+    public string messaging_product { get; set; }
+    public string url { get; set; }
+    public string mime_type { get; set; }
+    public string sha256 { get; set; }
+    public string file_size { get; set; }
+    public string id { get; set; }
+}
 
 #endregion
