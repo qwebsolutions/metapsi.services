@@ -1,42 +1,4 @@
-﻿using Metapsi.Ui;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-using Microsoft.VisualBasic;
-using System;
-using System.Buffers.Text;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data.Common;
-using System.Diagnostics;
-using System.Drawing;
-using System.Dynamic;
-using System.IO;
-using System.Net;
-using System.Reflection.Emit;
-using System.Reflection.Metadata;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.X86;
-using System.Security.AccessControl;
-using System.Security.Cryptography;
-using System.Security.Principal;
-using System.Text;
-using System.Xml;
-using System.Xml.Linq;
-using static Dapper.SqlMapper;
-using static Metapsi.Mds;
-using static Metapsi.Timer.Command;
-using static Metapsi.Timer.Event;
-using static System.Collections.Specialized.BitVector32;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Net.WebRequestMethods;
-using static System.Reflection.Metadata.BlobBuilder;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using System.Collections.Generic;
 
 namespace Metapsi.WhatsApp;
 
@@ -858,7 +820,6 @@ public class ReactionObject
     /// </summary>
     public string emoji { get; set; }
 }
-
 
 #region Inbound Messages
 
