@@ -1,118 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Metapsi.WhatsApp.Messages;
-
-public class MessageObject : IWhatsAppOutboundMessage
-{
-    /// <summary>
-    /// Required when type=audio.
-    /// A media object containing audio.
-    /// </summary>
-    public MediaObject audio { get; set; }
-
-    /// <summary>
-    /// Optional.
-    /// An arbitrary string, useful for tracking.
-    /// For example, you could pass the message template ID in this field to track your customer's journey starting from the first message you send. You could then track the ROI of different message template types to determine the most effective one.
-    /// Any app subscribed to the messages webhook field on the WhatsApp Business Account can get this string, as it is included in statuses object within webhook payloads.
-    /// Cloud API does not process this field, it just returns it as part of sent/delivered/read message webhooks.
-    /// Maximum 512 characters.
-    /// </summary>
-    public string biz_opaque_callback_data { get; set; }
-
-    /// <summary>
-    /// <para>DOCS issue: object in description, list in example</para>
-    /// Required when type=contacts. A contacts object.
-    /// </summary>
-    public List<ContactsObject> contacts { get; set; }
-
-    /// <summary>
-    /// Required if replying to any message in the conversation. An object containing the ID of a previous message you are replying to.
-    /// </summary>
-    public ContextObject context { get; set; }
-
-    /// <summary>
-    /// Required when type=document. A media object containing a document.
-    /// </summary>
-    public MediaObject document { get; set; }
-
-    /// <summary>
-    /// Required when type=image. A media object containing an image.
-    /// </summary>
-    public MediaObject image { get; set; }
-
-    /// <summary>
-    /// Required when type=interactive. An interactive object. The components of each interactive object generally follow a consistent pattern: header, body, footer, and action.
-    /// </summary>
-    public InteractiveObject interactive { get; set; }
-
-    /// <summary>
-    /// Required when type=location.
-    /// A location object.
-    /// </summary>
-    public LocationObject location { get; set; }
-
-    /// <summary>
-    /// Required
-    /// Messaging service used for the request.Use "whatsapp".
-    /// </summary>
-    public string messaging_product { get; set; } = "whatsapp";
-
-
-    /// <summary>
-    /// Required if type=text.
-    /// Allows for URL previews in text messages — See the Sending URLs in Text Messages.
-    /// This field is optional if not including a URL in your message. Values: false (default), true.
-    /// </summary>
-    public bool preview_url { get; set; }
-
-    /// <summary>
-    /// ?Missing in documentation?
-    /// </summary>
-    public ReactionObject reaction { get; set; }
-
-    /// <summary>
-    /// Optional.
-    /// Currently, you can only send messages to individuals.Set this as individual.
-    /// Default: individual
-    /// </summary>
-    public string recipient_type { get; set; } = "individual";
-
-    /// <summary>
-    /// A message's status. You can use this field to mark a message as read.
-    /// </summary>
-    public string status { get; set; }
-
-    /// <summary>
-    /// Required when type=sticker.
-    /// A media object containing a sticker.
-    /// Cloud API: Static and animated third-party outbound stickers are supported in addition to all types of inbound stickers.A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.An animated sticker must be 512x512 pixels and cannot exceed 500 KB.
-    /// On-Premises API: Only static third-party outbound stickers are supported in addition to all types of inbound stickers.A static sticker needs to be 512x512 pixels and cannot exceed 100 KB.Animated stickers are not supported.
-    /// </summary>
-    public MediaObject sticker { get; set; }
-
-    /// <summary>
-    /// Required when type=template. A template object.
-    /// </summary>
-    public TemplateObject template { get; set; }
-
-    /// <summary>
-    /// Required for text messages. A text object.
-    /// </summary>
-    public TextObject text { get; set; }
-
-    /// <summary>
-    /// Required.
-    /// WhatsApp ID or phone number of the customer you want to send a message to.See Phone Number Formats.
-    /// If needed, On-Premises API users can get this number by calling the contacts endpoint.
-    /// </summary>
-    public string to { get; set; }
-
-    /// <summary>
-    /// Optional. The type of message you want to send.If omitted, defaults to text.
-    /// </summary>
-    public string type { get; set; }
-}
 
 public class ContextObject
 {
@@ -344,12 +233,13 @@ public class FooterObject
 
 public class ActionObject
 {
+    // The thing that was called "action" in docs?
     /// <summary>
     /// Required for List Messages.
     /// Button content.It cannot be an empty string and must be unique within the message. Emojis are supported, markdown is not.
     /// Maximum length: 20 characters.
     /// </summary>
-    public string action { get; set; }
+    public string button { get; set; }
 
     /// <summary>
     /// Required for Reply Buttons.
@@ -376,6 +266,42 @@ public class ActionObject
     /// </summary>
     public List<SectionObject> sections { get; set; }
 
+    /// <summary>
+    /// ???
+    /// </summary>
+    public string name { get; set; }
+
+    /// <summary>
+    /// ???
+    /// </summary>
+    public FlowObject parameters { get; set; }
+}
+
+public class ButtonObject
+{
+    /// <summary>
+    /// only supported type is reply (for Reply Button)
+    /// </summary>
+    public string type { get; set; } = "reply";
+
+    public ReplyObject reply { get; set; }
+}
+
+public class ReplyObject
+{
+    /// <summary>
+    /// Button title. It cannot be an empty string and must be unique within the message. Emojis are supported, markdown is not. Maximum length: 20 characters.
+    /// </summary>
+    public string title { get; set; }
+
+    /// <summary>
+    /// Unique identifier for your button. This ID is returned in the webhook when the button is clicked by the user. Maximum length: 256 characters.
+    /// </summary>
+    public string id { get; set; }
+}
+
+public class FlowObject
+{
     /// <summary>
     /// Optional for Flows Messages. 
     /// The current mode of the Flow, either draft or published.
@@ -416,24 +342,6 @@ public class ActionObject
     public string flow_action { get; set; }
 
     public FlowActionPayloadObject flow_action_payload { get; set; }
-}
-
-public class ButtonObject
-{
-    /// <summary>
-    /// only supported type is reply (for Reply Button)
-    /// </summary>
-    public string type { get; set; } = "reply";
-
-    /// <summary>
-    /// Button title. It cannot be an empty string and must be unique within the message. Emojis are supported, markdown is not. Maximum length: 20 characters.
-    /// </summary>
-    public string title { get; set; }
-
-    /// <summary>
-    /// Unique identifier for your button. This ID is returned in the webhook when the button is clicked by the user. Maximum length: 256 characters.
-    /// </summary>
-    public string id { get; set; }
 }
 
 public class FlowActionPayloadObject
@@ -507,6 +415,19 @@ public class SectionObject
     /// Maximum length: 24 characters.
     /// </summary>
     public string title { get; set; }
+
+    public SectionObject() { }
+
+    public SectionObject(string title, params RowObject[] rows)
+    {
+        this.title = title;
+        this.rows = rows.ToList();
+    }
+
+    public SectionObject(params RowObject[] rows)
+    {
+        this.rows = rows.ToList();
+    }
 }
 
 public class ProductObject
@@ -696,6 +617,15 @@ public class ComponentObject
     /// Position index of the button.You can have up to 10 buttons using index values of 0 to 9.
     /// </summary>
     public string index { get; set; }
+
+    public ComponentObject() { }
+    public ComponentObject(string type, params ParameterObject[] parameters)
+    {
+        this.type = type;
+        if (!string.IsNullOrEmpty(sub_type)) this.sub_type = sub_type;
+        if (!string.IsNullOrEmpty(index)) this.index = index;
+        this.parameters = parameters.ToList();
+    }
 }
 
 public class CurrencyObject

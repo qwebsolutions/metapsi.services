@@ -1,19 +1,6 @@
 ﻿using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
-using System.Reflection.Metadata;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Numerics;
-using static Metapsi.Timer.Command;
-using Microsoft.VisualBasic;
-using System.Drawing;
 
 namespace Metapsi.WhatsApp.Webhooks;
-
-public class NotificationPayloadObject
-{
-    public string @object { get; set; } = "whatsapp_business_account";
-    public List<EntryObject> entry { get; set; }
-}
 
 public class EntryObject
 {
@@ -390,14 +377,8 @@ public class ImageObject
 
 public class InteractiveObject
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public TypeObject type { get; set; }
-}
+    public string type { get; set; }
 
-public class TypeObject
-{
     /// <summary>
     /// Sent when a customer clicks a button.
     /// </summary>
