@@ -26,6 +26,8 @@ public static class WhatsAppClientExtensions
         var postTextUrl = client.BaseUrl.TrimEnd('/') + "/postmessage/" + typeof(T).Name;
         var response = await client.HttpClient.PostAsJsonAsync(postTextUrl, message);
         response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadAsStringAsync();
     }
 
     public static async Task PostMessage(this WhatsAppClient client, string toPhoneNumber, string text)
