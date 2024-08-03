@@ -1,8 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Metapsi.WhatsApp;
@@ -15,6 +19,122 @@ public class MediaUrl
     public string sha256 { get; set; }
     public long file_size { get; set; }
     public string id { get; set; }
+}
+
+
+public class MediaType
+{
+    public string Extension { get; set; }
+    public string MimeType { get; set; }
+
+    public static class Audio
+    {
+        public static MediaType AAC = new() { Extension = ".aac", MimeType = "audio/aac" };
+        public static MediaType AMR = new() { Extension = ".amr", MimeType = "audio/amr" };
+        public static MediaType MP3 = new() { Extension = ".mp3", MimeType = "audio/mpeg" };
+        public static MediaType MP4 = new() { Extension = ".m4a", MimeType = "audio/mp4" };
+        public static MediaType OGG = new() { Extension = ".ogg", MimeType = "audio/ogg" };
+    }
+
+    public static class Document
+    {
+        public static MediaType Text = new() { Extension = ".txt", MimeType = "text/plain" };
+        public static MediaType Excel = new() { Extension = ".xls", MimeType = "application/vnd.ms-excel" };
+        public static MediaType ExcelX = new() { Extension = ".xlsx", MimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+        public static MediaType Word = new() { Extension = ".doc", MimeType = "application/msword" };
+        public static MediaType WordX = new() { Extension = ".docx", MimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+        public static MediaType PowerPoint = new() { Extension = ".ppt", MimeType = "application/vnd.ms-powerpoint" };
+        public static MediaType PowerPointX = new() { Extension = ".pptx", MimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation" };
+        public static MediaType PDF = new() { Extension = ".pdf", MimeType = "application/pdf" };
+    }
+
+    public static class Image
+    {
+        public static MediaType JPEG = new() { Extension = ".jpeg", MimeType = "image/jpeg" };
+        public static MediaType PNG = new() { Extension = ".png", MimeType = "image/png" };
+    }
+
+    public static class Sticker
+    {
+        public static MediaType WEBP = new() { Extension = ".webp", MimeType = "image/webp" };
+    }
+
+    public static class Video
+    {
+        public static MediaType _3GPP = new() { Extension = ".3gp", MimeType = "video/3gp" };
+        public static MediaType MP4 = new() { Extension = ".mp4", MimeType = "video/mp4" };
+    }
+
+    public static string GetContentType(string fileExtension)
+    {
+        return SupportedTypes.FirstOrDefault(x => x.Extension == fileExtension)?.MimeType;
+    }
+
+    public static List<MediaType> SupportedAudioTypes =
+        new List<MediaType>()
+        {
+            Audio.AAC,
+            Audio.AMR,
+            Audio.MP3,
+            Audio.MP4,
+            Audio.OGG
+        };
+
+    public static List<MediaType> SupportedDocumentTypes =
+        new List<MediaType>()
+        {
+            Document.Text,
+            Document.Excel,
+            Document.ExcelX,
+            Document.Word,
+            Document.WordX,
+            Document.PowerPoint,
+            Document.PowerPointX,
+            Document.PDF
+        };
+
+    public static List<MediaType> SupportedImageTypes =
+        new List<MediaType>()
+        {
+            Image.JPEG,
+            Image.PNG,
+        };
+
+    public static List<MediaType> SupportedVideoTypes =
+        new List<MediaType>()
+        {
+            Video._3GPP,
+            Video.MP4
+        };
+
+    public static List<MediaType> SupportedStickerTypes =
+        new List<MediaType>()
+        {
+            Sticker.WEBP
+        };
+
+    public static List<MediaType> SupportedTypes =
+        new List<MediaType>()
+        {
+            Audio.AAC,
+            Audio.AMR,
+            Audio.MP3,
+            Audio.MP4,
+            Audio.OGG,
+            Document.Text,
+            Document.Excel,
+            Document.ExcelX,
+            Document.Word,
+            Document.WordX,
+            Document.PowerPoint,
+            Document.PowerPointX,
+            Document.PDF,
+            Image.JPEG,
+            Image.PNG,
+            Sticker.WEBP,
+            Video._3GPP,
+            Video.MP4
+        };
 }
 
 /// <summary>
@@ -53,7 +173,11 @@ public static class WhatsAppCloudApiExtensions
         var request = new HttpRequestMessage(HttpMethod.Post,
             $"https://graph.facebook.com/{apiClient.ApiVersion}/{businessNumberId}/messages");
         request.Headers.Add("Authorization", "Bearer " + apiClient.BearerToken);
-        request.Content = JsonContent.Create(message);
+
+        request.Content = JsonContent.Create(message, options: new JsonSerializerOptions()
+        {
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        });
 
         var postResult = await apiClient.HttpClient.SendAsync(request);
 
@@ -92,7 +216,41 @@ public static class WhatsAppCloudApiExtensions
         return getMediaContentResult;
     }
 
-    public static void EnsureSuccessfulResponse(this PostMessageResponse response)
+    public static async Task<UploadMediaResponse> UploadMedia(
+        this WhatsAppCloudApiClient apiClient,
+        byte[] media,
+        string contentType,
+        string filePath,
+        string businessNumberId = null)
+    {
+        if (string.IsNullOrEmpty(businessNumberId))
+            businessNumberId = apiClient.DefaultBusinessNumberId;
+
+        var request = new HttpRequestMessage(HttpMethod.Post,
+            $"https://graph.facebook.com/{apiClient.ApiVersion}/{businessNumberId}/media");
+        request.Headers.Add("Authorization", "Bearer " + apiClient.BearerToken);
+
+        using (var content = new MultipartFormDataContent())
+        {
+            var fileContent = new ByteArrayContent(media);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            content.Add(fileContent, "file", Path.GetFileName(filePath));
+            content.Add(new StringContent(contentType), "type");
+            content.Add(new StringContent("whatsapp"), "messaging_product");
+
+            request.Content = content;
+
+            var postResult = await apiClient.HttpClient.SendAsync(request);
+
+            var resultBody = await postResult.Content.ReadAsStringAsync();
+            Console.WriteLine(resultBody);
+
+            var result = Metapsi.Serialize.FromJson<UploadMediaResponse>(resultBody);
+            return result;
+        }
+    }
+
+    public static void EnsureSuccessfulResponse(this ICloudApiResponse response)
     {
         if (HasError(response))
         {
@@ -100,7 +258,7 @@ public static class WhatsAppCloudApiExtensions
         }
     }
 
-    public static bool HasError(this PostMessageResponse response)
+    public static bool HasError(this ICloudApiResponse response)
     {
         if (response.error != null)
         {

@@ -22,6 +22,7 @@ public static class WhatsAppServiceExtensions
 {
     public const string WebhookPath = "webhook";
     public const string PostMessagePath = "postmessage";
+    public const string UploadMediaPath = "uploadmedia";
     public const string GetMediaPath = "getmedia";
 
     public static void UseWhatsApp(
@@ -41,6 +42,7 @@ public static class WhatsAppServiceExtensions
 
         var webhookEndpoint = endpoint.MapGroup(WebhookPath).MapWhatsAppWebHook(whatsAppSecret, onMessage, onException);
         var postMessageEndpoint = endpoint.MapGroup(PostMessagePath).MapPostMessage(cloudApiClient, onException);
+        var postMediaEndpoint = endpoint.MapGroup(UploadMediaPath).MapPostMedia(cloudApiClient, onException);
         var getMediaEndpoint = endpoint.MapGroup(GetMediaPath).MapGetMedia(cloudApiClient, onException);
 
         endpoint.MapGet("/", async (CommandContext commandContext, HttpContext httpContext) =>
@@ -49,6 +51,7 @@ public static class WhatsAppServiceExtensions
             {
                 WebhookPath,
                 PostMessagePath,
+                UploadMediaPath,
                 GetMediaPath
             });
         });
@@ -64,6 +67,26 @@ public static class WhatsAppServiceExtensions
             try
             {
                 var response = await apiClient.PostMessage(message);
+                return Results.Ok(response);
+            }
+            catch (Exception ex)
+            {
+                await onException(commandContext, httpContext, ex);
+                return Results.Problem();
+            }
+        });
+    }
+
+    public static RouteHandlerBuilder MapPostMedia(
+        this IEndpointRouteBuilder postGroup,
+        WhatsAppCloudApiClient apiClient,
+        Func<CommandContext, HttpContext, System.Exception, Task> onException)
+    {
+        return postGroup.MapPost($"/", async (CommandContext commandContext, HttpContext httpContext, UploadMediaRequest request) =>
+        {
+            try
+            {
+                var response = await apiClient.UploadMedia(request.Content, request.ContentType, request.FilePath);
                 return Results.Ok(response);
             }
             catch (Exception ex)

@@ -115,18 +115,16 @@ public class MessageObject
     /// Optional. The type of message you want to send.If omitted, defaults to text.
     /// </summary>
     public string type { get; set; }
+
+    public Messages.MediaObject video { get; set; }
 }
 
-/*{
-   "error": {
-      "message": "(#100) Unexpected key \"action\" on param \"interactive['action']\".",
-      "type": "OAuthException",
-      "code": 100,
-      "fbtrace_id": "AMC-hq7EI5GxpX4IGlE-T46"
-   }
-}*/
+public interface ICloudApiResponse
+{
+    ErrorObject error { get; }
+}
 
-public class PostMessageResponse
+public class PostMessageResponse : ICloudApiResponse
 {
     public string messaging_product { get; set; }
     public List<ContactObject> contacts { get; set; }
@@ -148,21 +146,13 @@ public class PostMessageResponse
         /// </summary>
         public string message_status { get; set; }
     }
+}
 
-    public class ErrorObject
-    {
-        public string message { get; set; }
-        public string type { get; set; }
-        public int code { get; set; }
-        public ErrorDataObject error_data { get; set; }
-        public string fbtrace_id { get; set; }
-    }
+public class UploadMediaResponse : ICloudApiResponse
+{
+    public string id { get; set; }
 
-    public class ErrorDataObject
-    {
-        public string messaging_product { get; set; }
-        public string details { get; set; }
-    }
+    public ErrorObject error { get; set; }
 }
 
 /// <summary>
@@ -172,4 +162,19 @@ public class NotificationPayloadObject
 {
     public string @object { get; set; } = "whatsapp_business_account";
     public List<Webhooks.EntryObject> entry { get; set; }
+}
+
+public class ErrorObject
+{
+    public string message { get; set; }
+    public string type { get; set; }
+    public int code { get; set; }
+    public ErrorDataObject error_data { get; set; }
+    public string fbtrace_id { get; set; }
+
+    public class ErrorDataObject
+    {
+        public string messaging_product { get; set; }
+        public string details { get; set; }
+    }
 }

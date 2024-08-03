@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.StaticFiles;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Metapsi.WhatsApp;
 
@@ -126,5 +128,106 @@ public static class WhatsAppMessage
         params Messages.ComponentObject[] components)
     {
         return Template(toPhoneNumber, templateName, language, components.ToList());
+    }
+
+    public static MessageObject AudioMessage(
+        string toPhoneNumber,
+        string mediaId)
+    {
+        return new MessageObject()
+        {
+            to = toPhoneNumber,
+            type = "audio",
+            audio = new Messages.MediaObject()
+            {
+                id = mediaId
+            }
+        };
+    }
+
+    public static MessageObject DocumentMessage(
+        string toPhoneNumber,
+        string mediaId,
+        string fileName)
+    {
+        return new MessageObject()
+        {
+            to = toPhoneNumber,
+            type = "document",
+            document = new Messages.MediaObject()
+            {
+                filename = fileName,
+                id = mediaId
+            }
+        };
+    }
+
+    public static MessageObject ImageMesage(
+        string toPhoneNumber,
+        string mediaId,
+        string caption = null)
+    {
+        var message = new MessageObject()
+        {
+            to = toPhoneNumber,
+            type = "image",
+            image = new Messages.MediaObject()
+            {
+                id = mediaId
+            }
+        };
+
+        if(!string.IsNullOrEmpty(caption))
+        {
+            message.image.caption = caption;
+        }
+
+        return message;
+    }
+
+    public static MessageObject VideoMessage(
+        string toPhoneNumber,
+        string mediaId,
+        string caption = null)
+    {
+        var message = new MessageObject()
+        {
+            to = toPhoneNumber,
+            type = "video",
+            video = new Messages.MediaObject()
+            {
+                caption = caption,
+                id = mediaId
+            }
+        };
+
+        if (!string.IsNullOrEmpty(caption))
+        {
+            message.video.caption = caption;
+        }
+
+        return message;
+    }
+
+    public static MessageObject MediaMessage(
+        string toPhoneNumber,
+        string mediaId,
+        string contentType,
+        string caption,
+        string fileName)
+    {
+        if (MediaType.SupportedAudioTypes.Any(x => x.MimeType == contentType))
+        {
+            return WhatsAppMessage.AudioMessage(toPhoneNumber, mediaId);
+        }
+        else if (MediaType.SupportedImageTypes.Any(x => x.MimeType == contentType))
+        {
+            return WhatsAppMessage.ImageMesage(toPhoneNumber, mediaId, caption);
+        }
+        else if (MediaType.SupportedVideoTypes.Any(x => x.MimeType == contentType))
+        {
+            return WhatsAppMessage.VideoMessage(toPhoneNumber, mediaId, caption);
+        }
+        else return WhatsAppMessage.DocumentMessage(toPhoneNumber, mediaId, fileName);
     }
 }
