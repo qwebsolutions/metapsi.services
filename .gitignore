@@ -6,3 +6,4 @@ appSettings.json
 *csproj.user
 launchSettings.json
 .vs
+/dev/nugets

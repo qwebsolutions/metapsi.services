@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.sln'">
+  	<MetapsiVersion>0.9.0</MetapsiVersion>
+  </PropertyGroup>
+
+</Project>

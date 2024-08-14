@@ -4,23 +4,12 @@
 		<TargetFramework>net7.0</TargetFramework>
 	</PropertyGroup>
 
-	<Import Condition="'$(Configuration)' == 'Debug'" Project="../paths.target" />
-
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.Heroicons\Metapsi.Heroicons.csproj" />
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.Shoelace\Metapsi.Shoelace.csproj" />
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.Hyperapp\Metapsi.Hyperapp.csproj" />
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.Web\Metapsi.Web.csproj" />
-		<ProjectReference Include="$(MetapsiPath)\Metapsi.SQLite\Metapsi.SQLite.csproj" />
-	</ItemGroup>
-
-
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
-		<PackageReference Include="Metapsi.Heroicons" Version="*" />
-		<PackageReference Include="Metapsi.Shoelace" Version="*" />
-		<PackageReference Include="Metapsi.SQLite" Version="*" />
-		<PackageReference Include="Metapsi.Web" Version="*" />
-		<PackageReference Include="Metapsi.Hyperapp" Version="*" />
+	<ItemGroup>
+		<PackageReference Include="Metapsi.Heroicons" Version="$(MetapsiVersion)" />
+		<PackageReference Include="Metapsi.Shoelace" Version="$(MetapsiVersion)" />
+		<PackageReference Include="Metapsi.SQLite" Version="$(MetapsiVersion)" />
+		<PackageReference Include="Metapsi.Web" Version="$(MetapsiVersion)" />
+		<PackageReference Include="Metapsi.Hyperapp" Version="$(MetapsiVersion)" />
 	</ItemGroup>
 
 
