@@ -1,7 +1,6 @@
 ﻿using Metapsi;
 using Metapsi.Hyperapp;
 using Metapsi.Html;
-using Metapsi.Ui;
 using Metapsi.Dom;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +12,6 @@ using Microsoft.AspNetCore.Authentication;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Reflection;
 
 namespace Metapsi;
 

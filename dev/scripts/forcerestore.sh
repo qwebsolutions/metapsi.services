@@ -9,5 +9,5 @@ do
 	echo removed $nugetpath
 done
 
-dotnet restore ../Mds.Dev.sln
+dotnet restore ../metapsi.services.dev.sln -p:MetapsiVersion=0.0.0-dev -p:RestoreAdditionalProjectSources=$(pwd)/../nugets
 

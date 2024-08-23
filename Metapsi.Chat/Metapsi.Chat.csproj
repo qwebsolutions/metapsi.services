@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Metapsi.ServiceDoc\Metapsi.ServiceDoc.csproj" />
+	  <ProjectReference Include="..\Metapsi.ServiceDoc\Metapsi.ServiceDoc.csproj" />
 	</ItemGroup>
 
 </Project>

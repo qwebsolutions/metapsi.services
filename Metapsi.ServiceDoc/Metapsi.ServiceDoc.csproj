@@ -9,7 +9,7 @@
 		<PackageReference Include="Metapsi.Shoelace" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.SQLite" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.Web" Version="$(MetapsiVersion)" />
-		<PackageReference Include="Metapsi.Hyperapp" Version="$(MetapsiVersion)" />
+		<PackageReference Include="Metapsi.Html" Version="$(MetapsiVersion)" />
 	</ItemGroup>
 
 
