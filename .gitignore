@@ -7,3 +7,4 @@ appSettings.json
 launchSettings.json
 .vs
 /dev/nugets
+/Scripts/nugets
