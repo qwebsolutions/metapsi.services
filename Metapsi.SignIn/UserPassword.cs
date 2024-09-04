@@ -1,7 +1,6 @@
 ﻿using Metapsi;
 using Metapsi.Hyperapp;
 using Metapsi.Html;
-using Metapsi.Dom;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

@@ -1,6 +1,5 @@
 ﻿using Metapsi.Hyperapp;
 using Metapsi.Syntax;
-using Metapsi.Dom;
 using System;
 using Metapsi.Shoelace;
 using System.Linq.Expressions;
