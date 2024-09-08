@@ -32,6 +32,7 @@ namespace Metapsi
             internal ApplicationSetup applicationSetup { get; set; }
             internal ImplementationGroup ig { get; set; }
             internal string dbPath { get; set; }
+            internal string overviewUrl { get; set; } = "docs";
 
             public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
         }
@@ -105,6 +106,11 @@ namespace Metapsi
             docsGroup.GroupRoutesBuilder = builder;
         }
 
+        public static void SetOverviewUrl(this DocsGroup docsGroup, string path)
+        {
+            docsGroup.overviewUrl = "/" + path.Trim('/');
+        }
+
         public static void ConfigureDocumentRoutes<T>(this DocumentProps<T> b, Action<RouteHandlerBuilder> builder)
         {
             b.DocumentRoutesBuilder = builder;
@@ -130,13 +136,13 @@ namespace Metapsi
             setProps(propsConfigurator);
 
             // Execute sequentially because they share the same db
-            foreach(var task in propsConfigurator.registerDocs)
+            foreach (var task in propsConfigurator.registerDocs)
             {
                 await task;
             }
 
             uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
-            var docsRoute = uiEndpoint.MapGet("/docs", async (CommandContext commandContext, HttpContext httpContext) =>
+            var docsRoute = uiEndpoint.MapGet(propsConfigurator.overviewUrl, async (CommandContext commandContext, HttpContext httpContext) =>
             {
                 var docsOverviewModel = new DocsOverviewModel();
                 foreach (var getOverview in propsConfigurator.getOverview)
