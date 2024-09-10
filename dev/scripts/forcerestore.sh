@@ -1,5 +1,7 @@
 #!/bin/sh
 
+dotnet clean ../metapsi.services.dev.sln
+
 source ./projects.sh
 for p in ${projects[@]}
 do
@@ -9,5 +11,5 @@ do
 	echo removed $nugetpath
 done
 
-dotnet restore ../metapsi.services.dev.sln -p:MetapsiVersion=0.0.0-dev -p:RestoreAdditionalProjectSources=$(pwd)/../nugets
+dotnet restore ../metapsi.services.dev.sln -p:MetapsiVersion=0.0.0-dev -p:RestoreAdditionalProjectSources=$(pwd)/../nugets --force --no-cache
 

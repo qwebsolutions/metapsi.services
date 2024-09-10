@@ -1,12 +1,11 @@
 ﻿using Dapper;
-using Metapsi.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using Metapsi.Sqlite;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -88,24 +87,24 @@ public static partial class ServiceDoc
         return new Request<List<T>>($"Get{typeof(T).Name}By{byProperty.PropertyName()}");
     }
 
-    public static Request<string> GetDbPath<T>(this DocApi<T> docApi)
-    {
-        return new Request<string>($"GetDbPath{typeof(T).Name}");
-    }
+    //public static Request<string> GetDbPath<T>(this DocApi<T> docApi)
+    //{
+    //    return new Request<string>($"GetDbPath{typeof(T).Name}");
+    //}
 
-    public static async Task<List<T>> Query<T>(this CommandContext commandContext, Func<OpenTransaction, Task<List<T>>> dbQuery)
-    {
-        var dbPath = await commandContext.Do(GetDocApi<T>().GetDbPath());
-        return await Db.WithRollback(dbPath, dbQuery);
-    }
+    //public static async Task<List<T>> Query<T>(this CommandContext commandContext, Func<OpenTransaction, Task<List<T>>> dbQuery)
+    //{
+    //    var dbPath = await commandContext.Do(GetDocApi<T>().GetDbPath());
+    //    return await Db.WithRollback(dbPath, dbQuery);
+    //}
 
     public static async Task RegisterDocBackendApi<T>(
         this ApplicationSetup applicationSetup,
         ImplementationGroup ig,
-        string sqliteDbFullPath,
+        Metapsi.Sqlite.SqliteQueue sqliteQueue,
         System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
-        await CreateDocumentTableAsync<T>(sqliteDbFullPath, idProperty);
+        await CreateDocumentTableAsync<T>(sqliteQueue, idProperty);
 
         var notARealState = applicationSetup.AddBusinessState(new object());
 
@@ -114,7 +113,7 @@ public static partial class ServiceDoc
         e.Using(notARealState, ig).EnqueueCommand(
             async (CommandContext commandContext, object _) =>
             {
-                await CreateDocumentTableAsync<T>(sqliteDbFullPath, idProperty);
+                await CreateDocumentTableAsync<T>(sqliteQueue, idProperty);
             }));
 
         var getId = idProperty.Compile();
@@ -131,15 +130,14 @@ public static partial class ServiceDoc
                     throw new Exception($"Cannot save {typeof(T).FullName}, id is empty");
                 }
 
-                var saveResult = await Db.WithCommit(
-                    sqliteDbFullPath,
+                var saveResult = await sqliteQueue.WithCommit(
                     async (transaction) =>
                     {
-                        var current = await transaction.Transaction.GetDocument(idProperty, id);
+                        var current = await transaction.GetDocument(idProperty, id);
                         if (object.Equals(current, default(T)))
                         {
                             // The document did not exist before, it is new
-                            await transaction.Transaction.SaveDocument(input, idProperty);
+                            await transaction.SaveDocument(input, idProperty);
 
                             return new SaveResult<T>() { New = new NewDoc<T>() { Doc = input } };
                         }
@@ -153,7 +151,7 @@ public static partial class ServiceDoc
                             }
                             else
                             {
-                                await transaction.Transaction.SaveDocument(input, idProperty);
+                                await transaction.SaveDocument(input, idProperty);
                                 return new SaveResult<T> { Changed = new ChangedDoc<T>() { New = input, Old = current } };
                             }
                         }
@@ -183,11 +181,10 @@ public static partial class ServiceDoc
             if (!TableCreated<T>())
                 return new List<T>();
 
-            return await Db.WithRollback(
-                sqliteDbFullPath,
+            return await sqliteQueue.WithRollback(
                 async (transaction) =>
                 {
-                    return await transaction.Transaction.GetDocuments<T>();
+                    return await transaction.GetDocuments<T>();
                 });
         });
 
@@ -196,11 +193,10 @@ public static partial class ServiceDoc
             if (!TableCreated<T>())
                 return default(T);
 
-            return await Db.WithRollback(
-                sqliteDbFullPath,
+            return await sqliteQueue.WithRollback(
                 async (transaction) =>
                 {
-                    return await transaction.Transaction.GetDocument<T, string>(idProperty, id);
+                    return await transaction.GetDocument<T, string>(idProperty, id);
                 });
         });
 
@@ -211,12 +207,11 @@ public static partial class ServiceDoc
                 return new DeleteResult<T>();
             }
 
-            var deleteResult = await Db.WithCommit(
-                sqliteDbFullPath,
+            var deleteResult = await sqliteQueue.WithCommit(
                 async (transaction) =>
                 {
-                    var doc = await transaction.Transaction.GetDocument(idProperty, id);
-                    await transaction.Transaction.DeleteDocuments(idProperty, id);
+                    var doc = await transaction.GetDocument(idProperty, id);
+                    await transaction.DeleteDocuments(idProperty, id);
                     return new DeleteResult<T>() { Doc = doc };
                 });
 
@@ -230,18 +225,17 @@ public static partial class ServiceDoc
 
         ig.MapRequest(GetDocApi<T>().Count, async (rc) =>
         {
-            return await Db.WithRollback(
-                sqliteDbFullPath,
+            return await sqliteQueue.WithRollback(
                 async (transaction) =>
                 {
                     return await transaction.Connection.ExecuteScalarAsync<int>($"select count (1) from {TableName<T>()}");
                 });
         });
 
-        ig.MapRequest(GetDocApi<T>().GetDbPath(), async (rc) =>
-        {
-            return sqliteDbFullPath;
-        });
+        //ig.MapRequest(GetDocApi<T>().GetDbPath(), async (rc) =>
+        //{
+        //    return sqliteQueue.DbPath;
+        //});
     }
 
     public static void RegisterFrontendRestApi<T>(

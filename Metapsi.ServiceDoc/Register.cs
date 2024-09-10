@@ -1,6 +1,7 @@
 ﻿using Metapsi.Html;
 using Metapsi.Hyperapp;
 using Metapsi.Shoelace;
+using Metapsi.Sqlite;
 using Metapsi.Syntax;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -31,7 +32,7 @@ namespace Metapsi
             internal IEndpointRouteBuilder uiEndpoint { get; set; }
             internal ApplicationSetup applicationSetup { get; set; }
             internal ImplementationGroup ig { get; set; }
-            internal string dbPath { get; set; }
+            internal Metapsi.Sqlite.SqliteQueue sqliteQueue { get; set; }
             internal string overviewUrl { get; set; } = "docs";
 
             public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
@@ -123,13 +124,13 @@ namespace Metapsi
             this IEndpointRouteBuilder uiEndpoint,
             ApplicationSetup applicationSetup,
             ImplementationGroup ig,
-            string dbPath,
+            Sqlite.SqliteQueue sqliteQueue,
             Action<DocsGroup> setProps)
         {
             var propsConfigurator = new DocsGroup()
             {
                 applicationSetup = applicationSetup,
-                dbPath = dbPath,
+                sqliteQueue = sqliteQueue,
                 ig = ig,
                 uiEndpoint = uiEndpoint
             };
@@ -171,7 +172,7 @@ namespace Metapsi
             var apiEndpoint = typeEndpoint.MapGroup("api");
             apiEndpoint.RegisterFrontendRestApi<T>(docsGroup, documentProps);
 
-            await docsGroup.applicationSetup.RegisterDocBackendApi<T>(docsGroup.ig, docsGroup.dbPath, documentProps.IdProperty);
+            await docsGroup.applicationSetup.RegisterDocBackendApi<T>(docsGroup.ig, docsGroup.sqliteQueue, documentProps.IdProperty);
 
             typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render(b, model, documentProps.IdProperty));
 

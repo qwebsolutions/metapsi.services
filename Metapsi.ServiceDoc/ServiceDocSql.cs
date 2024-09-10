@@ -1,10 +1,7 @@
 ﻿using Dapper;
 using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Reflection.Metadata;
 using System.Threading.Tasks;
 
 namespace Metapsi;
@@ -57,7 +54,7 @@ public static partial class ServiceDoc
 
     private static HashSet<string> createdTables = new HashSet<string>();
 
-    public static async Task CreateDocumentTableAsync<T>(string fullDbPath, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
+    public static async Task CreateDocumentTableAsync<T>(Metapsi.Sqlite.SqliteQueue sqliteQueue, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
     {
         var tableName = NormalizeTableName(typeof(T).FullName);
 
@@ -66,63 +63,56 @@ public static partial class ServiceDoc
             return;
 
         // creates only if it does not exist
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(fullDbPath));
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(sqliteQueue.DbPath));
 
-        using (SQLiteConnection conn = Sqlite.Db.ToConnection(fullDbPath))
+        if (createdTables.Count == 0)
         {
-            await conn.OpenAsync();
+            await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync("PRAGMA journal_mode=WAL;"));
+        }
 
-            if (createdTables.Count == 0)
+        if (!createdTables.Contains(tableName))
+        {
+            var indexProperties = new HashSet<string>();
+            indexProperties.Add(idProperty.PropertyName());
+            foreach (var property in typeof(T).GetProperties())
             {
-                await conn.ExecuteAsync("PRAGMA journal_mode=WAL;");
+                if (property.CustomAttributes.Any(x => x.AttributeType == typeof(DocIndexAttribute)))
+                {
+                    indexProperties.Add(property.Name);
+                }
             }
 
-            if (!createdTables.Contains(tableName))
+            var tableColumnDeclarations = new List<string>();
+
+            foreach (var indexProperty in indexProperties)
             {
-                var indexProperties = new HashSet<string>();
-                indexProperties.Add(idProperty.PropertyName());
-                foreach (var property in typeof(T).GetProperties())
-                {
-                    if (property.CustomAttributes.Any(x => x.AttributeType == typeof(DocIndexAttribute)))
-                    {
-                        indexProperties.Add(property.Name);
-                    }
-                }
-
-                var tableColumnDeclarations = new List<string>();
-
-                foreach (var indexProperty in indexProperties)
-                {
-                    tableColumnDeclarations.Add($"{indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL");
-                }
-                tableColumnDeclarations.Add("json TEXT");
-
-                var createDocCommand = $"CREATE TABLE IF NOT EXISTS {tableName} ({string.Join(",", tableColumnDeclarations)});";
-
-                await conn.ExecuteAsync(createDocCommand);
-
-                // If table already existed, it was not recreated. 
-                // Check if all index columns are created
-
-
-                var allColumns = await conn.QueryAsync<PragmaXTableRow>($"PRAGMA table_xinfo({tableName});");
-
-                foreach (var indexProperty in indexProperties)
-                {
-                    if (!allColumns.Any(x => x.name == indexProperty))
-                    {
-                        await conn.ExecuteAsync($"ALTER TABLE {tableName} ADD COLUMN {indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL");
-                    }
-                }
-
-                foreach (var indexProperty in indexProperties)
-                {
-                    await conn.ExecuteAsync(
-                        $"CREATE INDEX IF NOT EXISTS {tableName}_{indexProperty} on {tableName}({indexProperty});");
-                }
-
-                createdTables.Add(tableName);
+                tableColumnDeclarations.Add($"{indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL");
             }
+            tableColumnDeclarations.Add("json TEXT");
+
+            var createDocCommand = $"CREATE TABLE IF NOT EXISTS {tableName} ({string.Join(",", tableColumnDeclarations)});";
+
+            await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync(createDocCommand));
+
+            // If table already existed, it was not recreated. 
+            // Check if all index columns are created
+
+            var allColumns = await sqliteQueue.Enqueue(async (conn) => await conn.QueryAsync<PragmaXTableRow>($"PRAGMA table_xinfo({tableName});"));
+
+            foreach (var indexProperty in indexProperties)
+            {
+                if (!allColumns.Any(x => x.name == indexProperty))
+                {
+                    await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync($"ALTER TABLE {tableName} ADD COLUMN {indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL"));
+                }
+            }
+
+            foreach (var indexProperty in indexProperties)
+            {
+                await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync($"CREATE INDEX IF NOT EXISTS {tableName}_{indexProperty} on {tableName}({indexProperty});"));
+            }
+
+            createdTables.Add(tableName);
         }
     }
 
@@ -183,7 +173,7 @@ public static partial class ServiceDoc
     }
 
     public static async Task<T> GetDocument<T, TProp>(
-        this SQLiteTransaction transaction,
+        this System.Data.SQLite.SQLiteTransaction transaction,
         System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty,
         TProp value)
     {

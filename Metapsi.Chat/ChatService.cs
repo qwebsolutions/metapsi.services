@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Linq;
+using Metapsi.Sqlite;
 
 
 namespace Metapsi.Chat;
@@ -17,12 +18,12 @@ public static class ChatServiceExtensions
         this IEndpointRouteBuilder endpoint,
         ApplicationSetup applicationSetup,
         ImplementationGroup ig,
-        string dbPath)
+        SqliteQueue sqliteQueue)
     {
         var overviewRoute = await endpoint.UseDocs(
             applicationSetup, 
             ig, 
-            dbPath,
+            sqliteQueue,
             b =>
             {
                 b.AddDoc<Conversation>(x => x.Id, async (cc) => new Conversation());

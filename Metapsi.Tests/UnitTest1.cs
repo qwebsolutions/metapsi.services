@@ -52,7 +52,7 @@ public class UnitTest1
         var configurationUrl = await app.UseDocs(
             serviceSetup.ApplicationSetup,
             ig,
-            configurationDb,
+            new Sqlite.SqliteQueue(configurationDb),
             b =>
             {
                 b.AddDoc<TestEntity>(
@@ -84,14 +84,15 @@ public class UnitTest1
         var webApp = appBuilder.Build();
         webApp.UseMetapsi(applicationSetup);
         var chatEndpoint = webApp.MapGroup("chat");
-        var chatOverview = await chatEndpoint.UseMetapsiChat(applicationSetup, ig, chatDbPath);
+        var sqliteQueue = new Sqlite.SqliteQueue(chatDbPath);
+        var chatOverview = await chatEndpoint.UseMetapsiChat(applicationSetup, ig, sqliteQueue);
         chatOverview.WithMetadata(new EndpointNameMetadata("chat-overview"));
 
         var configEndpoint = webApp.MapGroup("config");
         await configEndpoint.UseDocs(
             applicationSetup,
             ig,
-            chatDbPath,
+            sqliteQueue,
             b =>
             {
                 b.AddDoc<ConfigurationParameter>(
