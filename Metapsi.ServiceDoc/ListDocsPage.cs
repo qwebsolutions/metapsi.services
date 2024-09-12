@@ -1,6 +1,5 @@
 ﻿using Metapsi.Hyperapp;
 using Metapsi.Syntax;
-using Microsoft.AspNetCore.Http;
 using Metapsi.Shoelace;
 using System;
 using System.Linq;
@@ -8,7 +7,6 @@ using System.Collections.Generic;
 using static Metapsi.Hyperapp.HyperType;
 using System.Linq.Expressions;
 using Metapsi.Html;
-using Metapsi.Log;
 
 namespace Metapsi
 {
@@ -33,7 +31,7 @@ namespace Metapsi
         internal static void Render<T, TId>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, TId>> idProperty)
         {
             b.AddStylesheet();
-            //b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
+            b.HeadAppend(b.HtmlStyle(b.Text(".sl-toast-stack { left: 50%; transform: translateX(-50%); }")));
             b.BodyAppend(b.Hyperapp(model,
                 (b, model) =>
                 {
@@ -45,16 +43,6 @@ namespace Metapsi
         {
             return b.Const(typeof(T).Name);
         }
-
-        //private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<string> request)
-        //{
-        //    return b.Concat(b.Get(model, x => x.ApiBase), b.Const("/"), request);
-        //}
-
-        //private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model)
-        //{
-        //    return b.Get(model, x => x.ApiBase);
-        //}
 
         public static Var<IVNode> RenderDocumentsList<T, TId>(this LayoutBuilder b, Var<ListDocsPage<T>> model, Expression<Func<T, TId>> idProperty)
         {
@@ -242,14 +230,9 @@ namespace Metapsi
         public static Var<HyperType.StateWithEffects> SaveDocument<T>(SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model)
         {
             var onResult = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<string> saveMessage) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<SaveResult> saveResult) =>
                 {
-                    b.If(
-                        b.HasValue(saveMessage),
-                        b =>
-                        {
-                            b.Alert(saveMessage);
-                        });
+                    b.ToastResult(b.Get(saveResult, x => x.Success), b.Get(saveResult, x => x.Message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
@@ -279,7 +262,7 @@ namespace Metapsi
                     b.PostJson(
                         b.Get(model, x=>x.SaveApiUrl),
                         b.Get(model, x => x.EditDocument),
-                        b.Def((SyntaxBuilder b, Var<string> saveMessage) =>
+                        b.Def((SyntaxBuilder b, Var<SaveResult> saveMessage) =>
                         {
                             b.Dispatch(dispatch, onResult, saveMessage);
                         }),
@@ -299,19 +282,15 @@ namespace Metapsi
             var getId = DefineGetIdAsString(b, idProperty);
 
             var onResult = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<string> deleteMessage) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<DeleteResult> deleteResult) =>
                 {
-                    b.Alert(deleteMessage);
+                    b.ToastResult(b.Get(deleteResult, x => x.Success), b.Get(deleteResult, x => x.Message));
 
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
                     var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
                     b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
-
-                    //var editedDoc = b.Get(model, getId, (model, getId) => model.Documents.Single(x => getId(x) == getId(model.EditDocument)));
-
-                    //b.Remove(b.Get(model, x => x.Documents), editedDoc);
 
                     return b.RefreshAllDocuments<T>();
                 });
@@ -564,6 +543,31 @@ namespace Metapsi
 
                         }));
                 });
+        }
+
+        public static void ToastResult(this SyntaxBuilder b, Var<bool> succes, Var<string> message)
+        {
+            b.SlToast(b =>
+            {
+                b.SetDuration(5000);
+                b.SetClosable();
+                b.If(
+                    succes,
+                    b => b.SetVariantSuccess(),
+                    b => b.SetVariantDanger());
+            },
+            b.CreateElement<SlIcon>(
+                "sl-icon",
+                b =>
+                {
+                    b.SetSlot(SlAlert.Slot.Icon);
+                    b.SetName(
+                        b.If(
+                            succes,
+                            b => b.Const("check2-circle"),
+                            b => b.Const("exclamation-octagon")));
+                }),
+            b.CreateTextNode(message));
         }
     }
 }

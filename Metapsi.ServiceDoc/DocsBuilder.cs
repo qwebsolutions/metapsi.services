@@ -59,12 +59,12 @@ namespace Metapsi
             (b as DocumentProps<T>).List = list;
         }
 
-        public static void SetFrontendSave<T>(this IDocumentProps<T> b, Func<T, Task<string>> save)
+        public static void SetFrontendSave<T>(this IDocumentProps<T> b, Func<T, Task<SaveResult>> save)
         {
             (b as DocumentProps<T>).Save= save;
         }
 
-        public static void SetFrontendDelete<T>(this IDocumentProps<T> b, Func<T, Task<string>> delete)
+        public static void SetFrontendDelete<T>(this IDocumentProps<T> b, Func<T, Task<DeleteResult>> delete)
         {
             (b as DocumentProps<T>).Delete = delete;
         }

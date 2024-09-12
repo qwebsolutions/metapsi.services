@@ -14,7 +14,7 @@ public static partial class ServiceDoc
             async (HttpContext httpContext) =>
             {
                 return await sqliteQueue.Enqueue(ListDocuments<T>);
-            }).WithMetadata(new EndpointNameAttribute($"api-{typeof(T).Name}"));
+            }).WithName(Frontend.DocumentRestApiBaseEndpointName<T>());
         ConfigureApiRoute(listRoute);
 
         var getRoute = endpoint.MapGet(

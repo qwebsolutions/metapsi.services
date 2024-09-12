@@ -60,10 +60,13 @@ public static class Program
                             });
                         });
 
-                        //b.SetFrontendDelete(async (TestEntity t) =>
-                        //{
-                        //    return "Not deleted";
-                        //});
+                        b.SetFrontendDelete(async (TestEntity t) =>
+                        {
+                            return new ServiceDoc.DeleteResult()
+                            {
+                                Message = "Cannot delete"
+                            };
+                        });
                     });
             });
         await app.RunAsync();

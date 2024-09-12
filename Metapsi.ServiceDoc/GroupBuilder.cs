@@ -46,8 +46,8 @@ namespace Metapsi
             internal Action<RouteHandlerBuilder> DocumentRoutesBuilder { get; set; }
             internal Func<Task<T>> Create { get; set; }
             internal Func<Task<List<T>>> List { get; set; }
-            internal Func<T, Task<string>> Save { get; set; }
-            internal Func<T, Task<string>> Delete { get; set; }
+            internal Func<T, Task<SaveResult>> Save { get; set; }
+            internal Func<T, Task<DeleteResult>> Delete { get; set; }
         }
 
         internal class DocumentProps<T, TId> : DocumentProps<T>
@@ -88,12 +88,20 @@ namespace Metapsi
             if (docProps.Save == null) docProps.Save = async (entity) =>
             {
                 await docsGroup.sqliteQueue.WithCommit(async t => await t.SaveDocument(entity));
-                return "Document saved";
+                return new SaveResult()
+                {
+                    Message = "Document saved",
+                    Success = true
+                };
             };
             if (docProps.Delete == null) docProps.Delete = async (entity) =>
             {
                 await docsGroup.sqliteQueue.WithCommit(async t => await t.DeleteDocument<T, TId>(idProperty.Compile()(entity)));
-                return "Document deleted";
+                return new DeleteResult()
+                {
+                    Message = "Document deleted",
+                    Success = true
+                };
             };
 
             var typeName = typeof(T).Name;

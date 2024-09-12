@@ -13,6 +13,18 @@ namespace Metapsi
 {
     public static partial class ServiceDoc
     {
+        public class SaveResult
+        {
+            public bool Success { get; set; }
+            public string Message { get; set; }
+        }
+
+        public class DeleteResult
+        {
+            public bool Success { get; set; }
+            public string Message { get; set; }
+        }
+
         internal static void MapListDocsFrontendApi<T, TId>(
             this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint,
             DocsGroup docsGroup,
