@@ -9,6 +9,13 @@ namespace Metapsi
 {
     public static class LocalControls
     {
+        public static System.Linq.Expressions.Expression<Func<TEntity, int>> IntPropertyExpression<TEntity>(string propertyName)
+        {
+            var x = Expression.Parameter(typeof(TEntity), "x");
+            return Expression.Lambda<Func<TEntity, int>>(Expression.Property(x, propertyName), x);
+        }
+
+
         public static System.Linq.Expressions.Expression<Func<TEntity, string>> StringPropertyExpression<TEntity>(string propertyName)
         {
             var x = Expression.Parameter(typeof(TEntity), "x");
@@ -42,8 +49,21 @@ namespace Metapsi
                         b.Text(b.FormatLabel(b.Const(property.Name))));
                     b.Push(editControls, checkbox);
                 }
-
-                if (property.PropertyType == typeof(string))
+                if (property.PropertyType == typeof(int))
+                {
+                    var input = b.SlInput(
+                        b =>
+                        {
+                            b.SetTypeNumber();
+                            b.SetLabel(b.FormatLabel(b.Const(property.Name)));
+                            b.BindTo(
+                                model,
+                                b.Def((SyntaxBuilder b, Var<TModel> model) => entity), IntPropertyExpression<TEntity>(property.Name),
+                                Converter.IntConverter);
+                        });
+                    b.Push(editControls, input);
+                }
+                else if (property.PropertyType == typeof(string))
                 {
                     var input = b.SlInput(
                         b =>

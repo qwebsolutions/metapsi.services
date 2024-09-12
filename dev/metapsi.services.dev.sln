@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.WhatsApp", "..\Meta
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Tests", "..\Metapsi.Tests\Metapsi.Tests.csproj", "{C34EC827-1046-4B9F-AF2D-01B3769F7317}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestScenario", "..\TestScenario\TestScenario.csproj", "{8D0341C5-8861-4030-A652-DA74D13D5FA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,8 +41,15 @@ Global
 		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {26CAA295-0802-4EE3-9F15-5EBC2FDE5C52}
 	EndGlobalSection
 EndGlobal

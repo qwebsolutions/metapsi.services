@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Linq;
 using Metapsi.Sqlite;
+using static Metapsi.ServiceDoc;
 
 
 namespace Metapsi.Chat;
@@ -21,44 +22,42 @@ public static class ChatServiceExtensions
         SqliteQueue sqliteQueue)
     {
         var overviewRoute = await endpoint.UseDocs(
-            applicationSetup, 
-            ig, 
             sqliteQueue,
             b =>
             {
-                b.AddDoc<Conversation>(x => x.Id, async (cc) => new Conversation());
+                b.AddDoc<Conversation>(x => x.Id, async () => new Conversation());
                 b.AddDoc<UserConversationEndpoint>(x => x.Id, async (cc) => new UserConversationEndpoint());
                 b.AddDoc<Message>(x => x.Id, async (cc) => new Message());
             });
 
-        var conversationDocs = ServiceDoc.GetDocApi<Conversation>();
-        var endpointDocs = ServiceDoc.GetDocApi<UserConversationEndpoint>();
-        var messageDocs = ServiceDoc.GetDocApi<Message>();
-
         var api = endpoint.MapGroup("api");
         api.MapPost(nameof(ChatClientApi.CreateConversation), async (CommandContext commandContext, CreateConversationRequest input) =>
         {
-            var saveResult = await commandContext.Do(conversationDocs.Save, new Conversation());
-            if (saveResult.New == null)
-                return Results.Text("Conversation already exists", statusCode: StatusCodes.Status412PreconditionFailed);
+            var conversation = new Conversation();
+            await sqliteQueue.Enqueue(async c => await c.InsertDocument(conversation));
+            
+            // TODO: Handle? Will throw exception now
+            //if (saveResult.New == null)
+                //return Results.Text("Conversation already exists", statusCode: StatusCodes.Status412PreconditionFailed);
 
             CreateConversationResponse response = new CreateConversationResponse()
             {
-                ConversationId = saveResult.New.Doc.Id
+                ConversationId = conversation.Id
             };
 
             foreach (var userId in input.UserIds)
             {
-                var newEndpointResult = await commandContext.Do(endpointDocs.Save, new UserConversationEndpoint()
+                var endpoint = new UserConversationEndpoint()
                 {
-                    ConversationId = saveResult.New.Doc.Id,
+                    ConversationId = conversation.Id,
                     UserId = userId
-                });
+                };
+                await sqliteQueue.Enqueue(async c => await c.InsertDocument(endpoint));
 
                 response.EndpointMappings.Add(new EndpointMapping()
                 {
                     UserId = userId,
-                    EndpointId = newEndpointResult.New.Doc.Id
+                    EndpointId = endpoint.Id
                 });
             }
 
@@ -67,15 +66,16 @@ public static class ChatServiceExtensions
 
         api.MapPost(nameof(ChatClientApi.PostMessage), async (CommandContext commandContext, PostMessageRequest request) =>
         {
-            var saveMessageResult = await commandContext.Do(messageDocs.Save, new Message()
+            var newMessage = new Message()
             {
                 FromEndpointId = request.FromEndpointId,
                 MessageText = request.Message,
-            });
+            };
+            await sqliteQueue.Enqueue(async c => await c.InsertDocument(newMessage));
 
             return new PostMessageResponse()
             {
-                MessageId = saveMessageResult.New.Doc.Id
+                MessageId = newMessage.Id
             };
         });
 

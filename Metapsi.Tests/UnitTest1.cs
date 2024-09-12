@@ -12,7 +12,6 @@ namespace Metapsi.Services.Tests;
 [DocDescription("Description here")]
 public class TestEntity
 {
-    [DocIndex]
     public string Key { get; set; }
     public string Notes { get; set; }
     public string Created { get; set; } = string.Empty;
@@ -50,8 +49,6 @@ public class UnitTest1
         var app = appBuilder.Build().UseMetapsi(serviceSetup.ApplicationSetup);
 
         var configurationUrl = await app.UseDocs(
-            serviceSetup.ApplicationSetup,
-            ig,
             new Sqlite.SqliteQueue(configurationDb),
             b =>
             {
@@ -59,11 +56,11 @@ public class UnitTest1
                     x => x.Key,
                     b =>
                     {
-                        b.Create = async (cc) => new TestEntity()
+                        b.SetFrontendNew(async () => new TestEntity()
                         {
                             Key = Guid.NewGuid().ToString(),
                             Notes = "Manually edited in " + serviceSetup.ServiceName
-                        };
+                        });
                     });
             });
 
@@ -90,8 +87,6 @@ public class UnitTest1
 
         var configEndpoint = webApp.MapGroup("config");
         await configEndpoint.UseDocs(
-            applicationSetup,
-            ig,
             sqliteQueue,
             b =>
             {
@@ -99,14 +94,14 @@ public class UnitTest1
                     x => x.Key,
                     b =>
                     {
-                        b.Create = async (cc) =>
+                        b.SetFrontendNew(async () =>
                         {
-                            var list = await cc.Do(ServiceDoc.GetDocApi<ConfigurationParameter>().List);
+                            var list = await sqliteQueue.Enqueue(async c => await c.ListDocuments<ConfigurationParameter>());
                             return new ConfigurationParameter()
                             {
                                 Key = list.Count.ToString()
                             };
-                        };
+                        });
                     });
             });
 

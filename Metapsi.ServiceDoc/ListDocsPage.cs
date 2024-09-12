@@ -16,7 +16,10 @@ namespace Metapsi
     {
         public class ListDocsPage<T>
         {
-            public string ApiBase { get; set; }
+            public string InitApiUrl { get; set; }
+            public string ListApiUrl { get; set; }
+            public string SaveApiUrl { get; set; }
+            public string DeleteApiUrl { get; set; }
             public List<T> Documents { get; set; } = new List<T>();
             public T EditDocument { get; set; }
             public string SummaryHtml { get; set; }
@@ -27,58 +30,14 @@ namespace Metapsi
         private const string IdEditDocument = "id-edit-document";
         private const string IdRemoveDocument = "id-remove-document";
 
-        internal static void Render<T>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, string>> idProperty)
+        internal static void Render<T, TId>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, TId>> idProperty)
         {
             b.AddStylesheet();
             //b.Document.Body.SetAttribute("class", "fixed top-0 right-0 left-0 bottom-0");
             b.BodyAppend(b.Hyperapp(model,
                 (b, model) =>
                 {
-                    return b.RenderClient(model, idProperty);
-                }));
-        }
-
-        internal static void Render(HtmlBuilder b, DocsOverviewModel model)
-        {
-            b.AddStylesheet();
-            b.BodyAppend(b.Hyperapp(model,
-                (b, model) =>
-                {
-                    return b.HtmlDiv(
-                        b =>
-                        {
-                            b.SetClass("flex flex-row flex-wrap gap-2 p-4");
-                        },
-                        b.Map(b.Get(model, x => x.DocTypes), (b, service) =>
-                        {
-                            return b.HtmlA(
-                                b =>
-                                {
-                                    b.SetHref(b.Get(service, x => x.ListUrl));
-                                },
-                                b.SlCard(
-                                    b =>
-                                    {
-                                    },
-                                    b.HtmlDiv(
-                                        b=>
-                                        {
-                                            b.SetClass("font-semibold text-gray-800");
-                                        },
-                                        b.Text(b.Get(service, x => x.DocTypeName))),
-                                    b.HtmlDiv(
-                                        b=>
-                                        {
-                                            b.SetClass("text-gray-600");
-                                        },
-                                        b.Text(b.AsString(b.Get(service, x => x.Count)))),
-                                    b.HtmlDiv(
-                                        b=>
-                                        {
-                                            b.SetClass("text-xs");
-                                        },
-                                        b.Text(b.Get(service, x=>x.ApiUrl)))));
-                        }));
+                    return b.RenderDocumentsList(model, idProperty);
                 }));
         }
 
@@ -87,17 +46,17 @@ namespace Metapsi
             return b.Const(typeof(T).Name);
         }
 
-        private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<string> request)
-        {
-            return b.Concat(b.Get(model, x => x.ApiBase), b.Const("/"), request);
-        }
+        //private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<string> request)
+        //{
+        //    return b.Concat(b.Get(model, x => x.ApiBase), b.Const("/"), request);
+        //}
 
-        private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model)
-        {
-            return b.Get(model, x => x.ApiBase);
-        }
+        //private static Var<string> GetApiUrl<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model)
+        //{
+        //    return b.Get(model, x => x.ApiBase);
+        //}
 
-        public static Var<IVNode> RenderClient<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model, Expression<Func<T, string>> idProperty)
+        public static Var<IVNode> RenderDocumentsList<T, TId>(this LayoutBuilder b, Var<ListDocsPage<T>> model, Expression<Func<T, TId>> idProperty)
         {
             string EntityName = typeof(T).Name;
             var rows = b.Get(model, x => x.Documents);
@@ -111,7 +70,7 @@ namespace Metapsi
                 b.DocsGrid(model, idProperty),
                 b.PageHeader<T>(), // Added after content for Z layer
                 b.EditDocumentPopup(model, idProperty),
-                b.RemoveDocumentPopup<T>(idProperty));
+                b.RemoveDocumentPopup<T, TId>(idProperty));
         }
 
         public static Var<IVNode> FilterBox<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
@@ -164,12 +123,12 @@ namespace Metapsi
                         })));
         }
 
-        public static Var<IVNode> EditDocumentPopup<T>(
+        public static Var<IVNode> EditDocumentPopup<T, TId>(
             this LayoutBuilder b,
             Var<ServiceDoc.ListDocsPage<T>> model,
-            Expression<Func<T, string>> idProperty)
+            Expression<Func<T, TId>> idProperty)
         {
-            var getId = DefineGetId(b, idProperty);
+            var getId = DefineGetIdAsString(b, idProperty);
             var isNew = b.Get(model, getId, (model, getId) => model.EditDocument == null || !model.Documents.Any(x => getId(x) == getId(model.EditDocument)));
             var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
 
@@ -199,9 +158,9 @@ namespace Metapsi
 
 
 
-        public static Var<IVNode> RemoveDocumentPopup<T>(
+        public static Var<IVNode> RemoveDocumentPopup<T, TId>(
             this LayoutBuilder b,
-            Expression<Func<T, string>> idProperty)
+            Expression<Func<T, TId>> idProperty)
         {
             var content =
                 b.HtmlDiv(
@@ -224,7 +183,6 @@ namespace Metapsi
                             b.SetVariantDanger();
                             b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
                             {
-                                //b.Remove(b.Get(model, x => x.Documents), b.Get(model, model => model.Documents.Single(x => x.Id == model.EditDocument.Id)));
                                 return RemoveDocument(b, model, idProperty);
                             }));
                         },
@@ -255,6 +213,7 @@ namespace Metapsi
             var onError = b.MakeAction(
                 (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
                 {
+                    b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
@@ -267,7 +226,8 @@ namespace Metapsi
                 model,
                 (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                 {
-                    b.GetJson<T>(b.GetApiUrl(model, b.Const(ServiceDoc.InitDocument<T>().Name)),
+                    b.GetJson<T>(
+                        b.Get(model, x=>x.InitApiUrl),
                         b.Def((SyntaxBuilder b, Var<T> newDocument) =>
                         {
                             b.Dispatch(dispatch, onResult, newDocument);
@@ -282,8 +242,14 @@ namespace Metapsi
         public static Var<HyperType.StateWithEffects> SaveDocument<T>(SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model)
         {
             var onResult = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ServiceDoc.SaveResult<T>> result) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<string> saveMessage) =>
                 {
+                    b.If(
+                        b.HasValue(saveMessage),
+                        b =>
+                        {
+                            b.Alert(saveMessage);
+                        });
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
@@ -297,6 +263,7 @@ namespace Metapsi
             var onError = b.MakeAction(
                 (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
                 {
+                    b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
@@ -309,11 +276,12 @@ namespace Metapsi
                 model,
                 (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                 {
-                    b.PostJson(b.GetApiUrl(model),
+                    b.PostJson(
+                        b.Get(model, x=>x.SaveApiUrl),
                         b.Get(model, x => x.EditDocument),
-                        b.Def((SyntaxBuilder b, Var<SaveResult<T>> saveResult) =>
+                        b.Def((SyntaxBuilder b, Var<string> saveMessage) =>
                         {
-                            b.Dispatch(dispatch, onResult, saveResult);
+                            b.Dispatch(dispatch, onResult, saveMessage);
                         }),
                         b.Def((SyntaxBuilder b, Var<ClientSideException> ex) =>
                         {
@@ -323,25 +291,27 @@ namespace Metapsi
         }
 
 
-        public static Var<HyperType.StateWithEffects> RemoveDocument<T>(
+        public static Var<HyperType.StateWithEffects> RemoveDocument<T, TId>(
             SyntaxBuilder b,
             Var<ServiceDoc.ListDocsPage<T>> model,
-            Expression<Func<T, string>> idProperty)
+            Expression<Func<T, TId>> idProperty)
         {
-            var getId = DefineGetId(b, idProperty);
+            var getId = DefineGetIdAsString(b, idProperty);
 
             var onResult = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ServiceDoc.DeleteResult<T>> result) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<string> deleteMessage) =>
                 {
+                    b.Alert(deleteMessage);
+
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
                     var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
                     b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
 
-                    var editedDoc = b.Get(model, getId, (model, getId) => model.Documents.Single(x => getId(x) == getId(model.EditDocument)));
+                    //var editedDoc = b.Get(model, getId, (model, getId) => model.Documents.Single(x => getId(x) == getId(model.EditDocument)));
 
-                    b.Remove(b.Get(model, x => x.Documents), editedDoc);
+                    //b.Remove(b.Get(model, x => x.Documents), editedDoc);
 
                     return b.RefreshAllDocuments<T>();
                 });
@@ -349,6 +319,7 @@ namespace Metapsi
             var onError = b.MakeAction(
                 (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
                 {
+                    b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
                     b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
 
@@ -359,26 +330,11 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
-                {
-                    var documentId = b.Call(getId, b.Get(model, x => x.EditDocument));
-                    var url = b.GetApiUrl(model, documentId);
-
-                    var fetch = b.Fetch(url, b =>
-                    {
-                        b.SetMethod("DELETE");
-                    });
-                    b.HandleJsonResponse(
-                        fetch,
-                        b.Def((SyntaxBuilder b, Var<DeleteResult<T>> deleteResult) =>
-                        {
-                            b.Dispatch(dispatch, onResult, deleteResult);
-                        }),
-                        b.Def((SyntaxBuilder b, Var<ClientSideException> ex) =>
-                        {
-                            b.Dispatch(dispatch, onError, ex);
-                        }));
-                });
+                b.PostJson(
+                    b.Get(model, x => x.DeleteApiUrl),
+                    b.Get(model, x => x.EditDocument),
+                    onResult,
+                    onError));
         }
 
         public static Var<HyperType.Action<ServiceDoc.ListDocsPage<T>>> RefreshAllDocuments<T>(this SyntaxBuilder b)
@@ -395,6 +351,7 @@ namespace Metapsi
                 var onError = b.MakeAction(
                     (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
                     {
+                        b.Alert(b.Get(apiError, x => x.message));
                         return b.Clone(model);
                     });
 
@@ -402,7 +359,8 @@ namespace Metapsi
                     model,
                     (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
                     {
-                        b.GetJson<List<T>>(b.GetApiUrl(model, b.Const(ServiceDoc.ListDocuments<T>().Name)),
+                        b.GetJson<List<T>>(
+                            b.Get(model, x=>x.ListApiUrl),
                             b.Def((SyntaxBuilder b, Var<List<T>> newList) =>
                             {
                                 b.Dispatch(dispatch, onResult, newList);
@@ -432,13 +390,13 @@ namespace Metapsi
                     }));
         }
 
-        private static Var<Func<T, string>> DefineGetId<T>(SyntaxBuilder b, Expression<Func<T, string>> IdProperty)
+        private static Var<Func<T, string>> DefineGetIdAsString<T, TId>(SyntaxBuilder b, Expression<Func<T, TId>> IdProperty)
         {
             return b.Def((SyntaxBuilder b, Var<T> item) =>
             {
                 return b.If(
                     b.HasObject(item),
-                    b => b.Get(item, IdProperty),
+                    b => b.AsString(b.Get(item, IdProperty)),
                     b => b.Const(string.Empty));
             });
         }
@@ -476,10 +434,10 @@ namespace Metapsi
             return b.Includes(b.ToLowercase(b.ConcatObjectValues(item)), b.ToLowercase(value));
         }
 
-        public static Var<IVNode> DocsGrid<T>(
-            this LayoutBuilder b, 
-            Var<ListDocsPage<T>> model, 
-            Expression<Func<T, string>> idProperty)
+        public static Var<IVNode> DocsGrid<T, TId>(
+            this LayoutBuilder b,
+            Var<ListDocsPage<T>> model,
+            Expression<Func<T, TId>> idProperty)
         {
             return
                 b.HtmlDiv(
@@ -545,8 +503,8 @@ namespace Metapsi
                                                 {
                                                     b.SetClass("flex flex-row items-center justify-end gap-2 pt-2");
                                                 },
-                                                b.EditDocumentButton<T>(document, idProperty),
-                                                b.DeleteDocumentButton<T>(document, idProperty)));
+                                                b.EditDocumentButton(document, idProperty),
+                                                b.DeleteDocumentButton(document, idProperty)));
                                     })));
                         },
                         b =>
@@ -556,7 +514,7 @@ namespace Metapsi
         }
 
 
-        public static Var<IVNode> EditDocumentButton<T>(this LayoutBuilder b, Var<T> document, Expression<Func<T, string>> IdProperty)
+        public static Var<IVNode> EditDocumentButton<T, TId>(this LayoutBuilder b, Var<T> document, Expression<Func<T, TId>> IdProperty)
         {
             return b.SlIconButton(
                 b =>
@@ -567,8 +525,8 @@ namespace Metapsi
                         {
                             var editDocReference = b.Get(
                                 model,
-                                b.Get(document, IdProperty),
-                                DefineGetId(b, IdProperty),
+                                b.AsString(b.Get(document, IdProperty)),
+                                DefineGetIdAsString(b, IdProperty),
                                 (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
                             b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
@@ -581,7 +539,7 @@ namespace Metapsi
                 });
         }
 
-        public static Var<IVNode> DeleteDocumentButton<T>(this LayoutBuilder b, Var<T> document, Expression<Func<T, string>> idProperty)
+        public static Var<IVNode> DeleteDocumentButton<T, TId>(this LayoutBuilder b, Var<T> document, Expression<Func<T, TId>> idProperty)
         {
             return b.SlIconButton(
                 b =>
@@ -590,7 +548,7 @@ namespace Metapsi
                     b.OnClickAction(
                         b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
                         {
-                            var getId = DefineGetId(b, idProperty);
+                            var getId = DefineGetIdAsString(b, idProperty);
                             var editDocReference =
                             b.Get(
                                 model,

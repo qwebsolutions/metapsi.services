@@ -1,14 +1,12 @@
 ﻿using Dapper;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SQLite;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Metapsi;
-
-public class DocIndexAttribute: Attribute
-{
-}
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class DocDescriptionAttribute : Attribute
@@ -24,199 +22,316 @@ public class DocDescriptionAttribute : Attribute
 
 public static partial class ServiceDoc
 {
-    public static string NormalizeTableName(string tableName)
-    {
-        return tableName.Replace(".", "_").Replace("`", "_").Replace("+", "_");
-    }
-
-    public static string TableName<T>()
-    {
-        return NormalizeTableName(typeof(T).FullName);
-    }
-
     internal class JustJson
     {
         public string json { get; set; }
     }
 
-    private class PragmaXTableRow
+    /// <summary>
+    /// Inserts the document. Will throw exception if ID already exists
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="document"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static async Task InsertDocument<T>(string tableName, T document, DbConnection connection, DbTransaction transaction)
     {
-        public string name { get; set; }
+        await connection.ExecuteAsync($"insert into {tableName} (json) values(@json)", new { json = Metapsi.Serialize.ToJson(document) }, transaction);
     }
 
-    public static bool TableCreated<T>()
+    /// <summary>
+    /// Inserts the document. Will throw exception if ID already exists
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="connection"></param>
+    /// <param name="document"></param>
+    /// <returns></returns>
+    public static Task InsertDocument<T>(this DbConnection connection, T document)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-
-        // If the table is created don't attempt to create it again
-        return createdTables.Contains(tableName);
+        // Use .GetType() to account for inheritance
+        var tableName = GetTableName(document.GetType());
+        return InsertDocument(tableName, document, connection, null);
     }
 
-    private static HashSet<string> createdTables = new HashSet<string>();
-
-    public static async Task CreateDocumentTableAsync<T>(Metapsi.Sqlite.SqliteQueue sqliteQueue, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
+    /// <summary>
+    /// Inserts the document. Will throw exception if ID already exists
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="transaction"></param>
+    /// <param name="document"></param>
+    /// <returns></returns>
+    public static Task InsertDocument<T>(this DbTransaction transaction, T document)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-
-        // If the table is created don't attempt to create it again
-        if (TableCreated<T>())
-            return;
-
-        // creates only if it does not exist
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(sqliteQueue.DbPath));
-
-        if (createdTables.Count == 0)
-        {
-            await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync("PRAGMA journal_mode=WAL;"));
-        }
-
-        if (!createdTables.Contains(tableName))
-        {
-            var indexProperties = new HashSet<string>();
-            indexProperties.Add(idProperty.PropertyName());
-            foreach (var property in typeof(T).GetProperties())
-            {
-                if (property.CustomAttributes.Any(x => x.AttributeType == typeof(DocIndexAttribute)))
-                {
-                    indexProperties.Add(property.Name);
-                }
-            }
-
-            var tableColumnDeclarations = new List<string>();
-
-            foreach (var indexProperty in indexProperties)
-            {
-                tableColumnDeclarations.Add($"{indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL");
-            }
-            tableColumnDeclarations.Add("json TEXT");
-
-            var createDocCommand = $"CREATE TABLE IF NOT EXISTS {tableName} ({string.Join(",", tableColumnDeclarations)});";
-
-            await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync(createDocCommand));
-
-            // If table already existed, it was not recreated. 
-            // Check if all index columns are created
-
-            var allColumns = await sqliteQueue.Enqueue(async (conn) => await conn.QueryAsync<PragmaXTableRow>($"PRAGMA table_xinfo({tableName});"));
-
-            foreach (var indexProperty in indexProperties)
-            {
-                if (!allColumns.Any(x => x.name == indexProperty))
-                {
-                    await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync($"ALTER TABLE {tableName} ADD COLUMN {indexProperty} TEXT GENERATED ALWAYS AS (json_extract(json, '$.{indexProperty}')) VIRTUAL NOT NULL"));
-                }
-            }
-
-            foreach (var indexProperty in indexProperties)
-            {
-                await sqliteQueue.Enqueue(async (conn) => await conn.ExecuteAsync($"CREATE INDEX IF NOT EXISTS {tableName}_{indexProperty} on {tableName}({indexProperty});"));
-            }
-
-            createdTables.Add(tableName);
-        }
+        // Use .GetType() to account for inheritance
+        var tableName = GetTableName(document.GetType());
+        return InsertDocument(tableName, document, transaction.Connection, transaction);
     }
 
-    public static async Task InsertDocument<T>(this System.Data.Common.DbTransaction transaction, T document)
+    /// <summary>
+    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="byProperty"></param>
+    /// <param name="value"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns>Number of deleted documents</returns>
+    public static async Task<int> DeleteDocuments<T, TProp>(
+        string tableName,
+        string byProperty,
+        TProp value,
+        DbConnection connection,
+        DbTransaction transaction)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        await transaction.Connection.ExecuteAsync($"insert into {tableName} (json) values(@json)", new { json = Metapsi.Serialize.ToJson(document) }, transaction);
+        var deletedCount = await transaction.Connection.ExecuteAsync($"delete from {tableName} where {byProperty}=@value", new { value }, transaction);
+        return deletedCount;
     }
 
-    public static async Task DeleteDocument<T>(this System.Data.Common.DbTransaction transaction, T document, System.Linq.Expressions.Expression<Func<T, string>> byProperty)
-    {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var propertyName = byProperty.PropertyName();
-        await transaction.Connection.ExecuteAsync($"delete from {tableName} where [{propertyName}]=@{propertyName}", document, transaction);
-    }
-
-    public static async Task DeleteDocuments<T, TProp>(
-        this System.Data.Common.DbTransaction transaction,
+    /// <summary>
+    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="connection"></param>
+    /// <param name="byProperty"></param>
+    /// <param name="value"></param>
+    /// <returns>Number of deleted documents</returns>
+    public static Task<int> DeleteDocuments<T, TProp>(
+        this DbConnection connection,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var propertyName = byProperty.PropertyName();
-        var deletedCount = await transaction.Connection.ExecuteAsync($"delete from {tableName} where {propertyName}=@value", new { value }, transaction);
+        // We don't have the actual document here, use typeof(T)
+        var tableName = GetTableName(typeof(T));
+        var byPropertyName = byProperty.PropertyName();
+        return DeleteDocuments<T, TProp>(tableName, byPropertyName, value, connection, null);
     }
 
-    public static async Task SaveDocument<T>(this System.Data.Common.DbTransaction transaction, T document, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
-    {
-        await DeleteDocument(transaction, document, idProperty);
-        await InsertDocument(transaction, document);
-    }
-
-    public static async Task SaveDocument<T, TProp>(
-        this System.Data.Common.DbTransaction transaction,
-        T document,
-        System.Linq.Expressions.Expression<Func<T, TProp>> idIndexProperty)
-    {
-        var getId = idIndexProperty.Compile();
-        var value = getId(document);
-        await DeleteDocuments(transaction, idIndexProperty, value);
-        await InsertDocument(transaction, document);
-    }
-
-    public static async Task<T> GetDocument<T>(this System.Data.Common.DbTransaction transaction, string id, System.Linq.Expressions.Expression<Func<T, string>> idProperty)
-    {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var idPropertyName = idProperty.PropertyName();
-        Dictionary<string, object> parameters = new Dictionary<string, object>();
-        parameters.Add($"@{idPropertyName}", id);
-        var json = await transaction.Connection.ExecuteScalarAsync<string>($"select json from {tableName} where {idPropertyName} = @{idPropertyName}", new DynamicParameters(parameters), transaction);
-
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return default(T);
-        }
-
-        return Metapsi.Serialize.FromJson<T>(json);
-    }
-
-    public static async Task<T> GetDocument<T, TProp>(
-        this System.Data.SQLite.SQLiteTransaction transaction,
-        System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty,
+    /// <summary>
+    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="transaction"></param>
+    /// <param name="byProperty"></param>
+    /// <param name="value"></param>
+    /// <returns>Number of deleted documents</returns>
+    public static Task<int> DeleteDocuments<T, TProp>(
+        this DbTransaction transaction,
+        System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var propertyName = byIndexProperty.PropertyName();
-        var justJson = await transaction.Connection.QuerySingleOrDefaultAsync<JustJson>($"select json from {tableName} where {propertyName} = @value", new { value }, transaction);
-        if (justJson != null)
-        {
-            return Metapsi.Serialize.FromJson<T>(justJson.json);
-        }
+        // We don't have the actual document here, use typeof(T)
+        var tableName = GetTableName(typeof(T));
+        var byPropertyName = byProperty.PropertyName();
+        return DeleteDocuments<T, TProp>(tableName, byPropertyName, value, transaction.Connection, transaction);
+    }
 
+    public static async Task DeleteDocument<T, TId>(
+        this DbTransaction transaction,
+        TId id)
+    {
+        var tableName = GetTableName(typeof(T));
+        var count = await DeleteDocuments<T, TId>(tableName, "Id", id, transaction.Connection, transaction);
+        if (count > 1)
+        {
+            throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
+        }
+    }
+
+    /// <summary>
+    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="byProperty"></param>
+    /// <param name="value"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns>Number of deleted documents</returns>
+    public static async Task<List<T>> DeleteReturnDocuments<T, TProp>(
+        string tableName,
+        string byProperty,
+        TProp value,
+        DbConnection connection,
+        DbTransaction transaction)
+    {
+        var deletedDocs = await transaction.Connection.QueryAsync<JustJson>($"delete from {tableName} where {byProperty}=@value returning json", new { value }, transaction);
+        return deletedDocs.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
+    }
+
+    public static async Task<T> DeleteReturnDocument<T, TId>(
+        this DbTransaction transaction,
+        TId id)
+    {
+        var tableName = GetTableName(typeof(T));
+        var documents = await DeleteReturnDocuments<T, TId>(tableName, "Id", id, transaction.Connection, transaction);
+        if (documents.Count > 1)
+        {
+            throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
+        }
+        return documents.SingleOrDefault();
+    }
+
+    /// <summary>
+    /// Insert or update document. The match is performed by the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="tableName"></param>
+    /// <param name="document"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static async Task SaveDocument<T>(string tableName, T document, DbConnection connection, DbTransaction transaction)
+    {
+        await connection.ExecuteAsync($"insert into {tableName} (json) values(@json) ON CONFLICT (Id) DO UPDATE SET json=@json", new { json = Metapsi.Serialize.ToJson(document) }, transaction);
+    }
+
+    /// <summary>
+    /// Insert or update document. The match is performed by the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="connection"></param>
+    /// <param name="document"></param>
+    /// <returns></returns>
+    public static Task SaveDocument<T>(
+        this System.Data.Common.DbConnection connection,
+        T document)
+    {
+        var tableName = GetTableName(typeof(T));
+        return SaveDocument<T>(tableName, document, connection, null);
+    }
+
+    /// <summary>
+    /// Insert or update document. The match is performed by the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="transaction"></param>
+    /// <param name="document"></param>
+    /// <returns></returns>
+    public static Task SaveDocument<T>(
+        this System.Data.Common.DbTransaction transaction,
+        T document)
+    {
+        var tableName = GetTableName(typeof(T));
+        return SaveDocument<T>(tableName, document, transaction.Connection, transaction);
+    }
+
+    /// <summary>
+    /// Get document of type T where <paramref name="id"/> matches the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TId"></typeparam>
+    /// <param name="tableName"></param>
+    /// <param name="id"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static async Task<T> GetDocument<T, TId>(string tableName, TId id, DbConnection connection, DbTransaction transaction)
+    {
+        var jsonRow = await transaction.Connection.QuerySingleOrDefaultAsync<JustJson>($"select json from {tableName} where Id = @id", new { id }, transaction);
+        if (jsonRow != null)
+        {
+            return Metapsi.Serialize.FromJson<T>(jsonRow.json);
+        }
         return default(T);
     }
 
-    public static async Task<List<T>> GetDocuments<T>(
-        this System.Data.Common.DbTransaction transaction)
+    /// <summary>
+    /// Get document of type T where <paramref name="id"/> matches the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TId"></typeparam>
+    /// <param name="connection"></param>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static Task<T> GetDocument<T, TId>(this System.Data.Common.DbConnection connection, TId id)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var jsonDocuments = await transaction.Connection.QueryAsync<JustJson>($"select json from {tableName} ", new { }, transaction);
+        var tableName = GetTableName(typeof(T));
+        return GetDocument<T, TId>(tableName, id, connection, null);
+    }
 
+    /// <summary>
+    /// Gets document of type T where <paramref name="id"/> matches the registered ID property
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TId"></typeparam>
+    /// <param name="transaction"></param>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static Task<T> GetDocument<T, TId>(this System.Data.Common.DbTransaction transaction, TId id)
+    {
+        var tableName = GetTableName(typeof(T));
+        return GetDocument<T, TId>(tableName, id, transaction.Connection, transaction);
+    }
+
+    /// <summary>
+    /// Get all documents where <paramref name="byProperty"/> matches <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="tableName"></param>
+    /// <param name="prop"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static async Task<List<T>> GetDocuments<T, TProp>(string tableName, string byProperty, TProp value, DbConnection connection, DbTransaction transaction)
+    {
+        var jsonDocuments = await transaction.Connection.QueryAsync<JustJson>($"select json from {tableName} where {byProperty} = @value", new { value }, transaction);
         return jsonDocuments.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
     }
 
-    public static async Task<List<T>> GetDocuments<T, TProp>(
-        this System.Data.Common.DbTransaction transaction,
-        System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty,
-        TProp value)
+    public static Task<List<T>> GetDocuments<T, TProp>(this DbConnection connection, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var propertyName = byIndexProperty.PropertyName();
-        var jsonDocuments = await transaction.Connection.QueryAsync<JustJson>($"select json from {tableName} where {propertyName} = @value", new { value }, transaction);
+        var tableName = GetTableName(typeof(T));
+        var byPropertyName = byIndexProperty.PropertyName();
+        return GetDocuments<T, TProp>(tableName, byPropertyName, value, connection, null);
+    }
 
+    public static Task<List<T>> GetDocuments<T, TProp>(this DbTransaction transaction, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
+    {
+        var tableName = GetTableName(typeof(T));
+        var byPropertyName = byIndexProperty.PropertyName();
+        return GetDocuments<T, TProp>(tableName, byPropertyName, value, transaction.Connection, transaction);
+    }
+
+    /// <summary>
+    /// Get all documents from table <paramref name="tableName"/>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="tableName"></param>
+    /// <param name="connection"></param>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static async Task<List<T>> ListDocuments<T>(string tableName, DbConnection connection, DbTransaction transaction)
+    {
+        var jsonDocuments = await connection.QueryAsync<JustJson>($"select json from {tableName}", transaction: transaction);
         return jsonDocuments.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
     }
 
-    public static async Task<List<T>> FindDocuments<T>(
-        this System.Data.Common.DbTransaction transaction,
-        System.Linq.Expressions.Expression<Func<T, string>> byIndexProperty,
-        string likePattern)
+    /// <summary>
+    /// Get all documents of type T
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="connection"></param>
+    /// <returns></returns>
+    public static Task<List<T>> ListDocuments<T>(this DbConnection connection)
     {
-        var tableName = NormalizeTableName(typeof(T).FullName);
-        var propertyName = byIndexProperty.PropertyName();
-        var jsonDocuments = await transaction.Connection.QueryAsync<JustJson>($"select json from {tableName} where {propertyName} like '{likePattern}'", new { }, transaction);
-        return jsonDocuments.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
+        var tableName = GetTableName(typeof(T));
+        return ListDocuments<T>(tableName, connection, null);
+    }
+
+    /// <summary>
+    /// Get all documents of type T
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="transaction"></param>
+    /// <returns></returns>
+    public static Task<List<T>> ListDocuments<T>(this DbTransaction transaction)
+    {
+        var tableName = GetTableName(typeof(T));
+        return ListDocuments<T>(tableName, transaction.Connection, transaction);
     }
 }
