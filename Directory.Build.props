@@ -9,4 +9,8 @@
   	<MetapsiVersion>*</MetapsiVersion>
   </PropertyGroup>
 
+	<Target Name="NugetVersion" AfterTargets="Build" >
+		<Message Text="$(ProjectDir) Metapsi version:$(MetapsiVersion)" Importance="high"/>
+	</Target>
+
 </Project>

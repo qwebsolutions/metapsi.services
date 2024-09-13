@@ -25,6 +25,7 @@ namespace Metapsi
             internal IEndpointRouteBuilder uiEndpoint { get; set; }
             internal Metapsi.Sqlite.SqliteQueue sqliteQueue { get; set; }
             internal string overviewUrl { get; set; } = "docs";
+            internal bool SetJournalWal = true;
             public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
         }
 
@@ -35,14 +36,9 @@ namespace Metapsi
 
         internal class DocumentProps<T> : IDocumentProps<T>
         {
-            public DocumentProps(string idPropertyName)
-            {
-                this.IdPropertyName = idPropertyName;
-            }
-
-            internal string IdPropertyName { get; private set; }
-            internal List<string> IndexProperties { get; } = new();
-            internal List<string> TableColumns { get; set; } = DataTable.GetColumns<T>();
+            internal IndexColumn IdColumn { get; set; }
+            internal List<IndexColumn> IndexColumns { get; } = new();
+            internal List<string> FrontendDefaultColumns { get; set; } = DataTable.GetColumns<T>();
             internal Action<RouteHandlerBuilder> DocumentRoutesBuilder { get; set; }
             internal Func<Task<T>> Create { get; set; }
             internal Func<Task<List<T>>> List { get; set; }
@@ -50,15 +46,15 @@ namespace Metapsi
             internal Func<T, Task<DeleteResult>> Delete { get; set; }
         }
 
-        internal class DocumentProps<T, TId> : DocumentProps<T>
-        {
-            public DocumentProps(Expression<Func<T, TId>> idProperty) : base(idProperty.PropertyName())
-            {
-                this.IdProperty = idProperty;
-            }
+        //internal class DocumentProps<T, TId> : DocumentProps<T>
+        //{
+        //    public DocumentProps(Expression<Func<T, TId>> idProperty) : base(idProperty.PropertyName())
+        //    {
+        //        this.IdProperty = idProperty;
+        //    }
 
-            public System.Linq.Expressions.Expression<Func<T, TId>> IdProperty { get; set; }
-        }
+        //    public System.Linq.Expressions.Expression<Func<T, TId>> IdProperty { get; set; }
+        //}
 
         public static void AddDoc<T, TId>(
             this DocsGroup docsGroup,
@@ -78,7 +74,14 @@ namespace Metapsi
             Func<Task<T>> createDocument,
             Action<IDocumentProps<T>> setProps = null)
         {
-            DocumentProps<T, TId> docProps = new DocumentProps<T, TId>(idProperty);
+            DocumentProps<T> docProps = new DocumentProps<T>()
+            {
+                IdColumn = new IndexColumn()
+                {
+                    CSharpType = typeof(TId),
+                    SourceProperty = idProperty.PropertyName()
+                }
+            };
             docProps.Create = createDocument;
             if (setProps != null)
             {
@@ -109,12 +112,17 @@ namespace Metapsi
 
             docsGroup.registerDocs.Add(async () =>
             {
-                await CreateDocumentTableAsync<T>(docsGroup.sqliteQueue, idProperty.PropertyName(), docProps.IndexProperties);
+                await CreateDocumentTableAsync<T>(
+                    docsGroup.sqliteQueue, 
+                    GetTableName(typeof(T)),
+                    docProps.IdColumn,
+                    docProps.IndexColumns);
 
-                await FillTypeEndpoint(
+                await FillTypeEndpoint<T,TId>(
                     typeEndpoint,
                     docsGroup,
-                    docProps);
+                    docProps,
+                    idProperty);
             });
             docsGroup.getOverview.Add(async (HttpContext httpContext) =>
             {
@@ -192,6 +200,15 @@ namespace Metapsi
             docsGroup.overviewUrl = "/" + path.Trim('/');
         }
 
+        /// <summary>
+        /// Keeps existing SQLITE journal mode, otherwise set to WAL
+        /// </summary>
+        /// <param name="docsGroup"></param>
+        public static void PreserveExistingJournalMode(this DocsGroup docsGroup)
+        {
+            docsGroup.SetJournalWal = false;
+        }
+
         public static async Task<RouteHandlerBuilder> UseDocs(
             this IEndpointRouteBuilder uiEndpoint,
             Sqlite.SqliteQueue sqliteQueue,
@@ -203,6 +220,10 @@ namespace Metapsi
                 uiEndpoint = uiEndpoint
             };
             setProps(propsConfigurator);
+            if (propsConfigurator.SetJournalWal)
+            {
+                await sqliteQueue.SetJournalModeWal();
+            }
 
             // Execute sequentially because they share the same db
             foreach (var registerDoc in propsConfigurator.registerDocs)
@@ -233,14 +254,15 @@ namespace Metapsi
         private static async Task FillTypeEndpoint<T, TId>(
             this IEndpointRouteBuilder typeEndpoint,
             DocsGroup docsGroup,
-            DocumentProps<T, TId> documentProps)
+            DocumentProps<T> documentProps,
+            System.Linq.Expressions.Expression<Func<T,TId>> idProperty)
         {
-            typeEndpoint.MapListDocsFrontendApi(docsGroup, documentProps);
+            typeEndpoint.MapListDocsFrontendApi<T,TId>(docsGroup, documentProps);
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
             apiEndpoint.MapRestApi<T, TId>(docsGroup.sqliteQueue);
 
-            typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render<T, TId>(b, model, documentProps.IdProperty));
+            typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render<T, TId>(b, model, idProperty));
         }
 
         public static void Render<TModel>(this IEndpointRouteBuilder uiEndpoint, System.Action<HtmlBuilder, TModel> buildPage)

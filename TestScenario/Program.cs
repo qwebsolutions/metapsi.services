@@ -20,6 +20,13 @@ public static class Program
         public NestedData Data { get; set; } = new NestedData();
     }
 
+    public class TestEntityStringKey
+    {
+        public string Key { get; set; }
+        public string Value { get; set; }
+        public bool Enabled { get; set; }
+    }
+
     public static async Task Main()
     {
         await RunServiceDocTest();
@@ -67,6 +74,12 @@ public static class Program
                                 Message = "Cannot delete"
                             };
                         });
+                    });
+                b.AddDoc<TestEntityStringKey>(
+                    x => x.Key,
+                    b=>
+                    {
+                        b.AddIndex(x => x.Enabled);
                     });
             });
         await app.RunAsync();

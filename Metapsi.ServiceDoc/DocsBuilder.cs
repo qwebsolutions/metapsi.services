@@ -13,18 +13,14 @@ namespace Metapsi
         {
             var documentProps = b as DocumentProps<T>;
             var indexPropertyName = property.PropertyName();
-            if (indexPropertyName != documentProps.IdPropertyName)
-            {
-                if (documentProps.IndexProperties.Contains(indexPropertyName))
-                {
-                    documentProps.IndexProperties.Add(indexPropertyName);
-                }
-            }
-        }
+            // If configured twice just remove previous
+            documentProps.IndexColumns.RemoveAll(x => x.SourceProperty == property.PropertyName());
 
-        public static void SetDefaultColumns<T>(this IDocumentProps<T> b, params string[] columnNames)
-        {
-            (b as DocumentProps<T>).TableColumns = columnNames.ToList();
+            documentProps.IndexColumns.Add(new IndexColumn()
+            {
+                CSharpType = typeof(TProp),
+                SourceProperty = property.PropertyName()
+            });
         }
 
         public static void ConfigureGroupRoutes(this DocsGroup docsGroup, Action<RouteHandlerBuilder> builder)
@@ -35,6 +31,11 @@ namespace Metapsi
         public static void ConfigureDocumentRoutes<T>(this IDocumentProps<T> b, Action<RouteHandlerBuilder> builder)
         {
             (b as DocumentProps<T>).DocumentRoutesBuilder = builder;
+        }
+
+        public static void SetFrontendDefaultColumns<T>(this IDocumentProps<T> b, params string[] columnNames)
+        {
+            (b as DocumentProps<T>).FrontendDefaultColumns = columnNames.ToList();
         }
 
         /// <summary>

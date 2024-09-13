@@ -85,7 +85,7 @@ public static partial class ServiceDoc
         DbConnection connection,
         DbTransaction transaction)
     {
-        var deletedCount = await transaction.Connection.ExecuteAsync($"delete from {tableName} where {byProperty}=@value", new { value }, transaction);
+        var deletedCount = await connection.ExecuteAsync($"delete from {tableName} where {byProperty}=@value", new { value }, transaction);
         return deletedCount;
     }
 
@@ -158,7 +158,7 @@ public static partial class ServiceDoc
         DbConnection connection,
         DbTransaction transaction)
     {
-        var deletedDocs = await transaction.Connection.QueryAsync<JustJson>($"delete from {tableName} where {byProperty}=@value returning json", new { value }, transaction);
+        var deletedDocs = await connection.QueryAsync<JustJson>($"delete from {tableName} where {byProperty}=@value returning json", new { value }, transaction);
         return deletedDocs.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
     }
 
@@ -231,7 +231,7 @@ public static partial class ServiceDoc
     /// <returns></returns>
     public static async Task<T> GetDocument<T, TId>(string tableName, TId id, DbConnection connection, DbTransaction transaction)
     {
-        var jsonRow = await transaction.Connection.QuerySingleOrDefaultAsync<JustJson>($"select json from {tableName} where Id = @id", new { id }, transaction);
+        var jsonRow = await connection.QuerySingleOrDefaultAsync<JustJson>($"select json from {tableName} where Id = @id", new { id }, transaction);
         if (jsonRow != null)
         {
             return Metapsi.Serialize.FromJson<T>(jsonRow.json);
@@ -279,7 +279,7 @@ public static partial class ServiceDoc
     /// <returns></returns>
     public static async Task<List<T>> GetDocuments<T, TProp>(string tableName, string byProperty, TProp value, DbConnection connection, DbTransaction transaction)
     {
-        var jsonDocuments = await transaction.Connection.QueryAsync<JustJson>($"select json from {tableName} where {byProperty} = @value", new { value }, transaction);
+        var jsonDocuments = await connection.QueryAsync<JustJson>($"select json from {tableName} where {byProperty} = @value", new { value }, transaction);
         return jsonDocuments.Select(x => Metapsi.Serialize.FromJson<T>(x.json)).ToList();
     }
 

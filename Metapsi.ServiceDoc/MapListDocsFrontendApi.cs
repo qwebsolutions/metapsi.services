@@ -28,7 +28,7 @@ namespace Metapsi
         internal static void MapListDocsFrontendApi<T, TId>(
             this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoint,
             DocsGroup docsGroup,
-            DocumentProps<T, TId> props)
+            DocumentProps<T> props)
         {
             var pageRoute = endpoint.MapGet("/", async (HttpContext httpContext) =>
             {
@@ -65,7 +65,7 @@ namespace Metapsi
                         DeleteApiUrl = linkGenerator.GetPathByName(httpContext, Frontend.DeleteApiEndpointName<T>()),
                         Documents = list,
                         SummaryHtml = summaryHtml,
-                        Columns = props.TableColumns
+                        Columns = props.FrontendDefaultColumns
                     });
             });
             pageRoute.WithName(Frontend.DocumentPageEndpointName<T>());
