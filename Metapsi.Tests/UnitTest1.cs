@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Metapsi.Chat;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Metapsi.Sqlite;
 using System.Net;
 using System.Text.RegularExpressions;
 using Metapsi.Html;
@@ -49,7 +50,7 @@ public class UnitTest1
         var app = appBuilder.Build().UseMetapsi(serviceSetup.ApplicationSetup);
 
         var configurationUrl = await app.UseDocs(
-            new Sqlite.SqliteQueue(configurationDb),
+            new ServiceDoc.DbQueue(new SqliteQueue(configurationDb)),
             b =>
             {
                 b.AddDoc<TestEntity>(
@@ -81,13 +82,13 @@ public class UnitTest1
         var webApp = appBuilder.Build();
         webApp.UseMetapsi(applicationSetup);
         var chatEndpoint = webApp.MapGroup("chat");
-        var sqliteQueue = new Sqlite.SqliteQueue(chatDbPath);
-        var chatOverview = await chatEndpoint.UseMetapsiChat(applicationSetup, ig, sqliteQueue);
+        var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(chatDbPath));
+        var chatOverview = await chatEndpoint.UseMetapsiChat(applicationSetup, ig, dbQueue);
         chatOverview.WithMetadata(new EndpointNameMetadata("chat-overview"));
 
         var configEndpoint = webApp.MapGroup("config");
         await configEndpoint.UseDocs(
-            sqliteQueue,
+            dbQueue,
             b =>
             {
                 b.AddDoc<ConfigurationParameter>(
@@ -96,7 +97,7 @@ public class UnitTest1
                     {
                         b.SetFrontendNew(async () =>
                         {
-                            var list = await sqliteQueue.Enqueue(async c => await c.ListDocuments<ConfigurationParameter>());
+                            var list = await dbQueue.ListDocuments<ConfigurationParameter>();
                             return new ConfigurationParameter()
                             {
                                 Key = list.Count.ToString()

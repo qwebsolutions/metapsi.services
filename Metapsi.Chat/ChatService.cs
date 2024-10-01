@@ -19,10 +19,10 @@ public static class ChatServiceExtensions
         this IEndpointRouteBuilder endpoint,
         ApplicationSetup applicationSetup,
         ImplementationGroup ig,
-        SqliteQueue sqliteQueue)
+        ServiceDoc.DbQueue dbQueue)
     {
         var overviewRoute = await endpoint.UseDocs(
-            sqliteQueue,
+            dbQueue,
             b =>
             {
                 b.AddDoc<Conversation>(x => x.Id, async () => new Conversation());
@@ -34,12 +34,8 @@ public static class ChatServiceExtensions
         api.MapPost(nameof(ChatClientApi.CreateConversation), async (CommandContext commandContext, CreateConversationRequest input) =>
         {
             var conversation = new Conversation();
-            await sqliteQueue.Enqueue(async c => await c.InsertDocument(conversation));
+            await dbQueue.SaveDocument(conversation);
             
-            // TODO: Handle? Will throw exception now
-            //if (saveResult.New == null)
-                //return Results.Text("Conversation already exists", statusCode: StatusCodes.Status412PreconditionFailed);
-
             CreateConversationResponse response = new CreateConversationResponse()
             {
                 ConversationId = conversation.Id
@@ -52,7 +48,7 @@ public static class ChatServiceExtensions
                     ConversationId = conversation.Id,
                     UserId = userId
                 };
-                await sqliteQueue.Enqueue(async c => await c.InsertDocument(endpoint));
+                await dbQueue.SaveDocument(endpoint);
 
                 response.EndpointMappings.Add(new EndpointMapping()
                 {
@@ -71,7 +67,7 @@ public static class ChatServiceExtensions
                 FromEndpointId = request.FromEndpointId,
                 MessageText = request.Message,
             };
-            await sqliteQueue.Enqueue(async c => await c.InsertDocument(newMessage));
+            await dbQueue.SaveDocument(newMessage);
 
             return new PostMessageResponse()
             {

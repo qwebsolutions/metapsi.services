@@ -26,7 +26,7 @@ public static partial class ServiceDoc
     }
     
     private static async Task CreateDocumentTableAsync<T>(
-        Metapsi.Sqlite.SqliteQueue sqliteQueue,
+        SqliteQueue sqliteQueue,
         string tableName,
         IndexColumn idColumn,
         List<IndexColumn> indexColumns)

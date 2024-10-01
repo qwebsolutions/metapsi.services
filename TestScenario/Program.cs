@@ -40,9 +40,9 @@ public static class Program
             System.IO.Path.Combine(
                 RelativePath.SearchUpfolder(RelativePath.From.EntryPath, System.IO.Path.Combine("Metapsi.Tests")),
                 "TestData", "test.db");
-        SqliteQueue sqliteQueue = new SqliteQueue(dbPath);
+        ServiceDoc.DbQueue dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(dbPath));
         await app.MapGroup("config").UseDocs(
-            sqliteQueue,
+            dbQueue,
             b =>
             {
                 b.SetOverviewUrl("all");
@@ -60,11 +60,8 @@ public static class Program
                         });
                         b.SetFrontendList(async () =>
                         {
-                            return await sqliteQueue.Enqueue(async c =>
-                            {
-                                var docs = await c.ListDocuments<TestEntity>();
-                                return docs.OrderByDescending(x => x.Id).ToList();
-                            });
+                            var docs = await dbQueue.SqliteQueue.ListDocuments<TestEntity>();
+                            return docs.OrderByDescending(x => x.Id).ToList();
                         });
 
                         b.SetFrontendDelete(async (TestEntity t) =>

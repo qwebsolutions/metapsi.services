@@ -23,7 +23,7 @@ namespace Metapsi
             internal List<Func<Task>> registerDocs = new();
             internal List<Func<HttpContext, Task<DocTypeOverview>>> getOverview = new();
             internal IEndpointRouteBuilder uiEndpoint { get; set; }
-            internal Metapsi.Sqlite.SqliteQueue sqliteQueue { get; set; }
+            internal DbQueue dbQueue { get; set; }
             internal string overviewUrl { get; set; } = "docs";
             internal bool SetJournalWal = true;
             public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
@@ -87,10 +87,10 @@ namespace Metapsi
             {
                 setProps(docProps);
             }
-            if (docProps.List == null) docProps.List = async () => await docsGroup.sqliteQueue.Enqueue(async (c) => await c.ListDocuments<T>());
+            if (docProps.List == null) docProps.List = docsGroup.dbQueue.ListDocuments<T>;
             if (docProps.Save == null) docProps.Save = async (entity) =>
             {
-                await docsGroup.sqliteQueue.WithCommit(async t => await t.SaveDocument(entity));
+                await docsGroup.dbQueue.SaveDocument(entity);
                 return new SaveResult()
                 {
                     Message = "Document saved",
@@ -99,7 +99,7 @@ namespace Metapsi
             };
             if (docProps.Delete == null) docProps.Delete = async (entity) =>
             {
-                await docsGroup.sqliteQueue.WithCommit(async t => await t.DeleteDocument<T, TId>(idProperty.Compile()(entity)));
+                await docsGroup.dbQueue.DeleteDocument<T, TId>(idProperty.Compile()(entity));
                 return new DeleteResult()
                 {
                     Message = "Document deleted",
@@ -113,7 +113,7 @@ namespace Metapsi
             docsGroup.registerDocs.Add(async () =>
             {
                 await CreateDocumentTableAsync<T>(
-                    docsGroup.sqliteQueue, 
+                    docsGroup.dbQueue.SqliteQueue, 
                     GetTableName(typeof(T)),
                     docProps.IdColumn,
                     docProps.IndexColumns);
@@ -127,7 +127,7 @@ namespace Metapsi
             docsGroup.getOverview.Add(async (HttpContext httpContext) =>
             {
                 var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
-                var count = await docsGroup.sqliteQueue.Enqueue(async (c) =>
+                var count = await docsGroup.dbQueue.SqliteQueue.Enqueue(async (c) =>
                 {
                     return await c.ExecuteScalarAsync<int>($"select count(1) from {GetTableName(typeof(T))}");
                 });
@@ -211,18 +211,18 @@ namespace Metapsi
 
         public static async Task<RouteHandlerBuilder> UseDocs(
             this IEndpointRouteBuilder uiEndpoint,
-            Sqlite.SqliteQueue sqliteQueue,
+            DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
             var propsConfigurator = new DocsGroup()
             {
-                sqliteQueue = sqliteQueue,
+                dbQueue = dbQueue,
                 uiEndpoint = uiEndpoint
             };
             setProps(propsConfigurator);
             if (propsConfigurator.SetJournalWal)
             {
-                await sqliteQueue.SetJournalModeWal();
+                await dbQueue.SqliteQueue.SetJournalModeWal();
             }
 
             // Execute sequentially because they share the same db
@@ -260,7 +260,7 @@ namespace Metapsi
             typeEndpoint.MapListDocsFrontendApi<T,TId>(docsGroup, documentProps);
 
             var apiEndpoint = typeEndpoint.MapGroup("api");
-            apiEndpoint.MapRestApi<T, TId>(docsGroup.sqliteQueue);
+            apiEndpoint.MapRestApi<T, TId>(docsGroup.dbQueue);
 
             typeEndpoint.Render<ServiceDoc.ListDocsPage<T>>((b, model) => Metapsi.ServiceDoc.Render<T, TId>(b, model, idProperty));
         }

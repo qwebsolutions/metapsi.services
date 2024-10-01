@@ -29,22 +29,19 @@ public static partial class ServiceDoc
     {
         return transaction.GetDocument<T, string>(id);
     }
-
-    /// <summary>
-    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <typeparam name="TProp"></typeparam>
-    /// <param name="connection"></param>
-    /// <param name="byProperty"></param>
-    /// <param name="value"></param>
-    /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T>(
+    public static Task<List<T>> GetDocuments<T>(
         this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, string>> byProperty,
+        System.Linq.Expressions.Expression<Func<T, string>> byIndexProperty,
         string value)
     {
-        return sqliteQueue.DeleteDocuments<T, string>(byProperty, value);
+        return sqliteQueue.GetDocuments<T, string>(byIndexProperty, value);
+    }
+
+    public static Task DeleteDocument<T>(
+        this DbQueue dbQueue,
+        string id)
+    {
+        return dbQueue.DeleteDocument<T, string>(id);
     }
 
     /// <summary>
@@ -55,25 +52,21 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    public static Task<T> GetDocument<T>(this SqliteQueue sqliteQueue,  string id)
+    public static Task<T> GetDocument<T>(this DbQueue dbQueue,  string id)
     {
-        return sqliteQueue.GetDocument<T, string>(id);
+        return dbQueue.GetDocument<T, string>(id);
     }
-
-    public static Task<List<T>> GetDocuments<T>(
-        this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, string>> byIndexProperty,
-        string value)
-    {
-        return sqliteQueue.GetDocuments<T, string>(byIndexProperty, value);
-    }
-
 
     // Int
 
     public static Task DeleteDocument<T>(this DbTransaction transaction, int id)
     {
         return transaction.DeleteDocument<T, int>(id);
+    }
+
+    public static Task DeleteDocument<T>(this DbQueue dbQueue, int id)
+    {
+        return dbQueue.DeleteDocument<T, int>(id);
     }
 
     public static Task<T> DeleteReturnDocument<T>(this DbTransaction transaction, int id)
@@ -91,24 +84,6 @@ public static partial class ServiceDoc
         return transaction.GetDocument<T, int>(id);
     }
 
-
-    /// <summary>
-    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <typeparam name="TProp"></typeparam>
-    /// <param name="connection"></param>
-    /// <param name="byProperty"></param>
-    /// <param name="value"></param>
-    /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T>(
-        this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, int>> byProperty,
-        int value)
-    {
-        return sqliteQueue.DeleteDocuments<T, int>(byProperty, value);
-    }
-
     /// <summary>
     /// Get document of type T where <paramref name="id"/> matches the registered ID property
     /// </summary>
@@ -117,17 +92,9 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    public static Task<T> GetDocument<T>(this SqliteQueue sqliteQueue, int id)
+    public static Task<T> GetDocument<T>(this DbQueue dbQueue, int id)
     {
-        return sqliteQueue.GetDocument<T, int>(id);
-    }
-
-    public static Task<List<T>> GetDocuments<T>(
-        this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, int>> byIndexProperty,
-        int value)
-    {
-        return sqliteQueue.GetDocuments<T, int>(byIndexProperty, value);
+        return dbQueue.GetDocument<T, int>(id);
     }
 
     // Guid
@@ -135,6 +102,11 @@ public static partial class ServiceDoc
     public static Task DeleteDocument<T>(this DbTransaction transaction, Guid id)
     {
         return transaction.DeleteDocument<T, Guid>(id);
+    }
+
+    public static Task DeleteDocument<T>(this DbQueue dbQueue, Guid id)
+    {
+        return dbQueue.DeleteDocument<T, Guid>(id);
     }
 
     public static Task<T> DeleteReturnDocument<T>(this DbTransaction transaction, Guid id)
@@ -152,24 +124,6 @@ public static partial class ServiceDoc
         return transaction.GetDocument<T, Guid>(id);
     }
 
-
-    /// <summary>
-    /// Deletes all documents having <paramref name="byProperty"/> equal to <paramref name="value"/>. <paramref name="byProperty"/> must be indexed.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <typeparam name="TProp"></typeparam>
-    /// <param name="connection"></param>
-    /// <param name="byProperty"></param>
-    /// <param name="value"></param>
-    /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T>(
-        this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, Guid>> byProperty,
-        Guid value)
-    {
-        return sqliteQueue.DeleteDocuments<T, Guid>(byProperty, value);
-    }
-
     /// <summary>
     /// Get document of type T where <paramref name="id"/> matches the registered ID property
     /// </summary>
@@ -178,16 +132,8 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="id"></param>
     /// <returns></returns>
-    public static Task<T> GetDocument<T>(this SqliteQueue sqliteQueue, Guid id)
+    public static Task<T> GetDocument<T>(this DbQueue dbQueue, Guid id)
     {
-        return sqliteQueue.GetDocument<T, Guid>(id);
-    }
-
-    public static Task<List<T>> GetDocuments<T>(
-        this SqliteQueue sqliteQueue,
-        System.Linq.Expressions.Expression<Func<T, Guid>> byIndexProperty,
-        Guid value)
-    {
-        return sqliteQueue.GetDocuments<T, Guid>(byIndexProperty, value);
+        return dbQueue.GetDocument<T, Guid>(id);
     }
 }

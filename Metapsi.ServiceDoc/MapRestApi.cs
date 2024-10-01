@@ -7,13 +7,13 @@ namespace Metapsi;
 
 public static partial class ServiceDoc
 {
-    public static void MapRestApi<T, TId>(this IEndpointRouteBuilder endpoint, SqliteQueue sqliteQueue)
+    public static void MapRestApi<T, TId>(this IEndpointRouteBuilder endpoint, DbQueue dbQueue)
     {
         var listRoute = endpoint.MapGet(
             "/",
             async (HttpContext httpContext) =>
             {
-                return await sqliteQueue.Enqueue(ListDocuments<T>);
+                return await dbQueue.ListDocuments<T>();
             }).WithName(Frontend.DocumentRestApiBaseEndpointName<T>());
         ConfigureApiRoute(listRoute);
 
@@ -21,15 +21,13 @@ public static partial class ServiceDoc
             "/{id}",
             async (TId id) =>
             {
-                return await sqliteQueue.Enqueue(async c =>
+                var document = await dbQueue.GetDocument<T, TId>(id);
+
+                if (document is T item)
                 {
-                    var document = await c.GetDocument<T, TId>(id);
-                    if (document is T item)
-                    {
-                        return Results.Ok(item);
-                    }
-                    return Results.NotFound();
-                });
+                    return Results.Ok(item);
+                }
+                return Results.NotFound();
             });
         ConfigureApiRoute(getRoute);
 
@@ -37,7 +35,7 @@ public static partial class ServiceDoc
             "/",
             async (HttpContext httpContext, T item) =>
             {
-                await sqliteQueue.Enqueue(async c => await c.SaveDocument(item));
+                await dbQueue.SaveDocument(item);
             });
         ConfigureApiRoute(saveRoute);
 
@@ -45,13 +43,10 @@ public static partial class ServiceDoc
             "/{id}",
             async (HttpContext httpContext, TId id) =>
             {
-                var deleteResult = await sqliteQueue.WithCommit(async t =>
+                var doc = await dbQueue.DeleteDocument<T, TId>(id);
+                if (doc is T item)
                 {
-                    return await t.DeleteReturnDocument<T, TId>(id);
-                });
-                if (deleteResult != null)
-                {
-                    return Results.Ok(deleteResult);
+                    return Results.Ok(doc);
                 }
                 return Results.NotFound();
             });
