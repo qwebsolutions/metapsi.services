@@ -382,7 +382,7 @@ namespace Metapsi
 
         private static void AddStylesheet(this HtmlBuilder b)
         {
-            StaticFiles.Add(typeof(ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
+            //StaticFiles.Add(typeof(ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
 
             b.HeadAppend(
                 b.HtmlLink(
