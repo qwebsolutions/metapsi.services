@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 source ./projects.sh
 
 for repo in ${repos[@]}

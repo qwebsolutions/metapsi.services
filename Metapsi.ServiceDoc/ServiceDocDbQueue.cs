@@ -71,7 +71,7 @@ public static partial class ServiceDoc
         /// <returns>Document, if id matches. Otherwise null</returns>
         public virtual Task<T> GetDocument<T, TId>(TId id)
         {
-            return this.SqliteQueue.GetDocument<T, TId>(id);
+            return this.SqliteQueue.Read(async (SQLiteConnection c) => await c.GetDocument<T, TId>(id));
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ public static partial class ServiceDoc
         /// <returns>List of all documents of type T</returns>
         public virtual Task<List<T>> ListDocuments<T>()
         {
-            return this.SqliteQueue.Enqueue(async c => await c.ListDocuments<T>());
+            return this.SqliteQueue.Read(async (SQLiteConnection c) => await c.ListDocuments<T>());
         }
     }
 }

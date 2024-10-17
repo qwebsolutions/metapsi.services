@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
+using System.Data.SQLite;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Metapsi;
@@ -14,18 +17,22 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="document"></param>
     /// <returns></returns>
-    public static Task InsertDocument<T>(this DbConnection connection, T document)
+    public static async Task InsertDocument<T>(this DbConnection connection, T document)
     {
-        // Use .GetType() to account for inheritance
-        var tableName = GetTableName(document.GetType());
-        return InsertDocument(tableName, document, connection, null);
+        await connection.ChangeDocuments(cb =>
+        {
+            cb.InsertDocument(document);
+        });
     }
 
-    public static Task<T> InsertReturnDocument<T>(this DbConnection connection, T document)
+    public static async Task<T> InsertReturnDocument<T>(this DbConnection connection, T document)
     {
-        // Use .GetType() to account for inheritance
-        var tableName = GetTableName(document.GetType());
-        return InsertReturnDocument(tableName, document, connection, null);
+        var documents = await connection.GetDocuments<T>(cb =>
+        {
+            cb.InsertReturnDocument(document);
+        });
+
+        return documents.SingleOrDefault();
     }
 
     /// <summary>
@@ -37,15 +44,15 @@ public static partial class ServiceDoc
     /// <param name="byProperty"></param>
     /// <param name="value"></param>
     /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T, TProp>(
+    public static async Task<int> DeleteDocuments<T, TProp>(
         this DbConnection connection,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        // We don't have the actual document here, use typeof(T)
-        var tableName = GetTableName(typeof(T));
-        var byPropertyName = byProperty.PropertyName();
-        return DeleteDocuments<T, TProp>(tableName, byPropertyName, value, connection, null);
+        return await connection.GetScalar<int>(cb =>
+        {
+            cb.DeleteDocuments(byProperty, value);
+        });
     }
 
     /// <summary>
@@ -57,15 +64,15 @@ public static partial class ServiceDoc
     /// <param name="byProperty"></param>
     /// <param name="value"></param>
     /// <returns>List of deleted documents</returns>
-    public static Task<List<T>> DeleteReturnDocuments<T, TProp>(
+    public static async Task<List<T>> DeleteReturnDocuments<T, TProp>(
         this DbConnection connection,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        // We don't have the actual document here, use typeof(T)
-        var tableName = GetTableName(typeof(T));
-        var byPropertyName = byProperty.PropertyName();
-        return DeleteReturnDocuments<T, TProp>(tableName, byPropertyName, value, connection, null);
+        return await connection.GetDocuments<T>(cb =>
+        {
+            cb.DeleteReturnDocuments(byProperty, value);
+        });
     }
 
     // Single document cannot be deleted outside of a transaction
@@ -77,12 +84,14 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="document"></param>
     /// <returns>Saved document</returns>
-    public static Task SaveDocument<T>(
+    public static async Task SaveDocument<T>(
         this System.Data.Common.DbConnection connection,
         T document)
     {
-        var tableName = GetTableName(typeof(T));
-        return SaveDocument<T>(tableName, document, connection, null);
+        await connection.ChangeDocuments(cb =>
+        {
+            cb.SaveDocument(document);
+        });
     }
 
     /// <summary>
@@ -92,12 +101,16 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="document"></param>
     /// <returns>Saved document</returns>
-    public static Task<T> SaveReturnDocument<T>(
+    public static async Task<T> SaveReturnDocument<T>(
         this System.Data.Common.DbConnection connection,
         T document)
     {
-        var tableName = GetTableName(typeof(T));
-        return SaveReturnDocument<T>(tableName, document, connection, null);
+        var results = await connection.GetDocuments<T>(cb =>
+        {
+            cb.SaveReturnDocument(document);
+        });
+
+        return results.SingleOrDefault();
     }
 
     /// <summary>
@@ -108,10 +121,13 @@ public static partial class ServiceDoc
     /// <param name="connection"></param>
     /// <param name="id"></param>
     /// <returns>Document, if id matches. Otherwise null</returns>
-    public static Task<T> GetDocument<T, TId>(this System.Data.Common.DbConnection connection, TId id)
+    public static async Task<T> GetDocument<T, TId>(this System.Data.Common.DbConnection connection, TId id)
     {
-        var tableName = GetTableName(typeof(T));
-        return GetDocument<T, TId>(tableName, id, connection, null);
+        var results = await connection.GetDocuments<T>(cb =>
+        {
+            cb.GetDocuments<T, TId>("Id", id);
+        });
+        return results.SingleOrDefault();
     }
 
     /// <summary>
@@ -123,11 +139,12 @@ public static partial class ServiceDoc
     /// <param name="byIndexProperty"></param>
     /// <param name="value"></param>
     /// <returns>List of matching documents</returns>
-    public static Task<List<T>> GetDocuments<T, TProp>(this DbConnection connection, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
+    public static async Task<List<T>> GetDocuments<T, TProp>(this DbConnection connection, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        var tableName = GetTableName(typeof(T));
-        var byPropertyName = byIndexProperty.PropertyName();
-        return GetDocuments<T, TProp>(tableName, byPropertyName, value, connection, null);
+        return await connection.GetDocuments<T>(cb =>
+        {
+            cb.GetDocuments(byIndexProperty, value);
+        });
     }
 
     /// <summary>
@@ -136,9 +153,11 @@ public static partial class ServiceDoc
     /// <typeparam name="T"></typeparam>
     /// <param name="connection"></param>
     /// <returns>List of all documents of type T</returns>
-    public static Task<List<T>> ListDocuments<T>(this DbConnection connection)
+    public static async Task<List<T>> ListDocuments<T>(this DbConnection connection)
     {
-        var tableName = GetTableName(typeof(T));
-        return ListDocuments<T>(tableName, connection, null);
+        return await connection.GetDocuments<T>(cb=>
+        {
+            cb.ListDocuments<T>();
+        });
     }
 }

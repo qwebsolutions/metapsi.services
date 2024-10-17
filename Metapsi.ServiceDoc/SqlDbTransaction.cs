@@ -15,18 +15,22 @@ public static partial class ServiceDoc
     /// <param name="transaction"></param>
     /// <param name="document"></param>
     /// <returns></returns>
-    public static Task InsertDocument<T>(this DbTransaction transaction, T document)
+    public static async Task InsertDocument<T>(this DbTransaction transaction, T document)
     {
-        // Use .GetType() to account for inheritance
-        var tableName = GetTableName(document.GetType());
-        return InsertDocument(tableName, document, transaction.Connection, transaction);
+        await transaction.ChangeDocuments(cb =>
+        {
+            cb.InsertDocument(document);
+        });
     }
 
-    public static Task<T> InsertReturnDocument<T>(this DbTransaction transaction, T document)
+    public static async Task<T> InsertReturnDocument<T>(this DbTransaction transaction, T document)
     {
-        // Use .GetType() to account for inheritance
-        var tableName = GetTableName(document.GetType());
-        return InsertReturnDocument(tableName, document, transaction.Connection, transaction);
+        var results = await transaction.GetDocuments<T>(cb =>
+        {
+            cb.InsertReturnDocument<T>(document);
+        });
+
+        return results.SingleOrDefault();
     }
 
     /// <summary>
@@ -38,15 +42,15 @@ public static partial class ServiceDoc
     /// <param name="byProperty"></param>
     /// <param name="value"></param>
     /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T, TProp>(
+    public static async Task<int> DeleteDocuments<T, TProp>(
         this DbTransaction transaction,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        // We don't have the actual document here, use typeof(T)
-        var tableName = GetTableName(typeof(T));
-        var byPropertyName = byProperty.PropertyName();
-        return DeleteDocuments<T, TProp>(tableName, byPropertyName, value, transaction.Connection, transaction);
+        return await transaction.GetScalar<int>(cb =>
+        {
+            cb.DeleteDocuments(byProperty, value);
+        });
     }
 
     /// <summary>
@@ -62,8 +66,10 @@ public static partial class ServiceDoc
         this DbTransaction transaction,
         TId id)
     {
-        var tableName = GetTableName(typeof(T));
-        var count = await DeleteDocuments<T, TId>(tableName, "Id", id, transaction.Connection, transaction);
+        var count = await transaction.GetScalar<int>(cb =>
+        {
+            cb.DeleteDocuments<T, TId>("Id", id);
+        });
         if (count > 1)
         {
             throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
@@ -83,8 +89,10 @@ public static partial class ServiceDoc
         this DbTransaction transaction,
         TId id)
     {
-        var tableName = GetTableName(typeof(T));
-        var documents = await DeleteReturnDocuments<T, TId>(tableName, "Id", id, transaction.Connection, transaction);
+        var documents = await transaction.GetDocuments<T>(cb =>
+        {
+            cb.DeleteReturnDocuments<T, TId>("Id", id);
+        });
         if (documents.Count > 1)
         {
             throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
@@ -99,12 +107,14 @@ public static partial class ServiceDoc
     /// <param name="transaction"></param>
     /// <param name="document"></param>
     /// <returns>Saved document</returns>
-    public static Task SaveDocument<T>(
+    public static async Task SaveDocument<T>(
         this System.Data.Common.DbTransaction transaction,
         T document)
     {
-        var tableName = GetTableName(typeof(T));
-        return SaveDocument<T>(tableName, document, transaction.Connection, transaction);
+        await transaction.ChangeDocuments(cb =>
+        {
+            cb.SaveDocument(document);
+        });
     }
 
     /// <summary>
@@ -114,12 +124,16 @@ public static partial class ServiceDoc
     /// <param name="transaction"></param>
     /// <param name="document"></param>
     /// <returns>Saved document</returns>
-    public static Task<T> SaveReturnDocument<T>(
+    public static async Task<T> SaveReturnDocument<T>(
         this System.Data.Common.DbTransaction transaction,
         T document)
     {
-        var tableName = GetTableName(typeof(T));
-        return SaveReturnDocument<T>(tableName, document, transaction.Connection, transaction);
+        var documents = await transaction.GetDocuments<T>(cb =>
+        {
+            cb.SaveReturnDocument(document);
+        });
+
+        return documents.SingleOrDefault();
     }
 
     /// <summary>
@@ -130,10 +144,13 @@ public static partial class ServiceDoc
     /// <param name="transaction"></param>
     /// <param name="id"></param>
     /// <returns>Document, if id matches. Otherwise null</returns>
-    public static Task<T> GetDocument<T, TId>(this System.Data.Common.DbTransaction transaction, TId id)
+    public static async Task<T> GetDocument<T, TId>(this System.Data.Common.DbTransaction transaction, TId id)
     {
-        var tableName = GetTableName(typeof(T));
-        return GetDocument<T, TId>(tableName, id, transaction.Connection, transaction);
+        var documents = await transaction.GetDocuments<T>(cb =>
+        {
+            cb.GetDocuments<T, TId>("Id", id);
+        });
+        return documents.SingleOrDefault();
     }
 
     /// <summary>
@@ -145,11 +162,12 @@ public static partial class ServiceDoc
     /// <param name="byIndexProperty"></param>
     /// <param name="value"></param>
     /// <returns>List of matching documents</returns>
-    public static Task<List<T>> GetDocuments<T, TProp>(this DbTransaction transaction, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
+    public static async Task<List<T>> GetDocuments<T, TProp>(this DbTransaction transaction, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        var tableName = GetTableName(typeof(T));
-        var byPropertyName = byIndexProperty.PropertyName();
-        return GetDocuments<T, TProp>(tableName, byPropertyName, value, transaction.Connection, transaction);
+        return await transaction.GetDocuments<T>(cb =>
+        {
+            cb.GetDocuments(byIndexProperty, value);
+        });
     }
 
     /// <summary>
@@ -158,9 +176,11 @@ public static partial class ServiceDoc
     /// <typeparam name="T"></typeparam>
     /// <param name="transaction"></param>
     /// <returns>List of all documents of type T</returns>
-    public static Task<List<T>> ListDocuments<T>(this DbTransaction transaction)
+    public static async Task<List<T>> ListDocuments<T>(this DbTransaction transaction)
     {
-        var tableName = GetTableName(typeof(T));
-        return ListDocuments<T>(tableName, transaction.Connection, transaction);
+        return await transaction.GetDocuments<T>(cb =>
+        {
+            cb.ListDocuments<T>();
+        });
     }
 }
