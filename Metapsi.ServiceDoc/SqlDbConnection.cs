@@ -19,20 +19,12 @@ public static partial class ServiceDoc
     /// <returns></returns>
     public static async Task InsertDocument<T>(this DbConnection connection, T document)
     {
-        await connection.ChangeDocuments(cb =>
-        {
-            cb.InsertDocument(document);
-        });
+        await new InsertDocumentCommand<T>(connection).ExecuteAsync(document);
     }
 
     public static async Task<T> InsertReturnDocument<T>(this DbConnection connection, T document)
     {
-        var documents = await connection.GetDocuments<T>(cb =>
-        {
-            cb.InsertReturnDocument(document);
-        });
-
-        return documents.SingleOrDefault();
+        return await new InsertReturnDocumentCommand<T>(connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -44,15 +36,12 @@ public static partial class ServiceDoc
     /// <param name="byProperty"></param>
     /// <param name="value"></param>
     /// <returns>Number of deleted documents</returns>
-    public static async Task<int> DeleteDocuments<T, TProp>(
+    public static async Task DeleteDocuments<T, TProp>(
         this DbConnection connection,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        return await connection.GetScalar<int>(cb =>
-        {
-            cb.DeleteDocuments(byProperty, value);
-        });
+        await new DeleteDocumentsCommand<T, TProp>(connection, byProperty.PropertyName()).ExecuteAsync(value);
     }
 
     /// <summary>
@@ -69,10 +58,8 @@ public static partial class ServiceDoc
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        return await connection.GetDocuments<T>(cb =>
-        {
-            cb.DeleteReturnDocuments(byProperty, value);
-        });
+        var result = new DeleteReturnDocumentsCommand<T, TProp>(connection, byProperty.PropertyName()).ExecuteAsync(value);
+        return result.ToBlockingEnumerable().ToList();
     }
 
     // Single document cannot be deleted outside of a transaction
@@ -88,10 +75,7 @@ public static partial class ServiceDoc
         this System.Data.Common.DbConnection connection,
         T document)
     {
-        await connection.ChangeDocuments(cb =>
-        {
-            cb.SaveDocument(document);
-        });
+        await new SaveDocumentCommand<T>(connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -105,12 +89,7 @@ public static partial class ServiceDoc
         this System.Data.Common.DbConnection connection,
         T document)
     {
-        var results = await connection.GetDocuments<T>(cb =>
-        {
-            cb.SaveReturnDocument(document);
-        });
-
-        return results.SingleOrDefault();
+        return await new SaveReturnDocumentCommand<T>(connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -123,11 +102,7 @@ public static partial class ServiceDoc
     /// <returns>Document, if id matches. Otherwise null</returns>
     public static async Task<T> GetDocument<T, TId>(this System.Data.Common.DbConnection connection, TId id)
     {
-        var results = await connection.GetDocuments<T>(cb =>
-        {
-            cb.GetDocuments<T, TId>("Id", id);
-        });
-        return results.SingleOrDefault();
+        return await new GetDocumentCommand<T, TId>(connection).ExecuteAsync(id);
     }
 
     /// <summary>
@@ -141,10 +116,8 @@ public static partial class ServiceDoc
     /// <returns>List of matching documents</returns>
     public static async Task<List<T>> GetDocuments<T, TProp>(this DbConnection connection, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        return await connection.GetDocuments<T>(cb =>
-        {
-            cb.GetDocuments(byIndexProperty, value);
-        });
+        var result = new GetDocumentsCommand<T, TProp>(connection, byIndexProperty.PropertyName()).ExecuteAsync(value);
+        return result.ToBlockingEnumerable().ToList();
     }
 
     /// <summary>
@@ -155,9 +128,7 @@ public static partial class ServiceDoc
     /// <returns>List of all documents of type T</returns>
     public static async Task<List<T>> ListDocuments<T>(this DbConnection connection)
     {
-        return await connection.GetDocuments<T>(cb=>
-        {
-            cb.ListDocuments<T>();
-        });
+        var result = new ListDocumentsCommand<T>(connection).ExecuteAsync();
+        return result.ToBlockingEnumerable().ToList();
     }
 }

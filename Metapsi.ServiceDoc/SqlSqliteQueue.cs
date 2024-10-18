@@ -40,7 +40,7 @@ public static partial class ServiceDoc
     /// <param name="byIndexProperty"></param>
     /// <param name="value"></param>
     /// <returns>Number of deleted documents</returns>
-    public static Task<int> DeleteDocuments<T, TProp>(this SqliteQueue sqliteQueue, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
+    public static Task DeleteDocuments<T, TProp>(this SqliteQueue sqliteQueue, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
         return sqliteQueue.Enqueue(async c => await c.DeleteDocuments(byIndexProperty, value));
     }

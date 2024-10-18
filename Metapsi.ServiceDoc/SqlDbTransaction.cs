@@ -17,20 +17,12 @@ public static partial class ServiceDoc
     /// <returns></returns>
     public static async Task InsertDocument<T>(this DbTransaction transaction, T document)
     {
-        await transaction.ChangeDocuments(cb =>
-        {
-            cb.InsertDocument(document);
-        });
+        await new InsertDocumentCommand<T>(transaction.Connection).ExecuteAsync(document);
     }
 
     public static async Task<T> InsertReturnDocument<T>(this DbTransaction transaction, T document)
     {
-        var results = await transaction.GetDocuments<T>(cb =>
-        {
-            cb.InsertReturnDocument<T>(document);
-        });
-
-        return results.SingleOrDefault();
+        return await new InsertReturnDocumentCommand<T>(transaction.Connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -42,15 +34,30 @@ public static partial class ServiceDoc
     /// <param name="byProperty"></param>
     /// <param name="value"></param>
     /// <returns>Number of deleted documents</returns>
-    public static async Task<int> DeleteDocuments<T, TProp>(
+    public static async Task DeleteDocuments<T, TProp>(
         this DbTransaction transaction,
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        return await transaction.GetScalar<int>(cb =>
-        {
-            cb.DeleteDocuments(byProperty, value);
-        });
+        await new DeleteDocumentsCommand<T, TProp>(transaction.Connection, byProperty.PropertyName()).ExecuteAsync(value);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="TProp"></typeparam>
+    /// <param name="transaction"></param>
+    /// <param name="byProperty"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static async Task<List<T>> DeleteReturnDocuments<T, TProp>(
+        this DbTransaction transaction,
+        System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
+        TProp value)
+    {
+        var result = new DeleteReturnDocumentsCommand<T, TProp>(transaction.Connection, byProperty.PropertyName()).ExecuteAsync(value);
+        return result.ToBlockingEnumerable().ToList();
     }
 
     /// <summary>
@@ -66,14 +73,7 @@ public static partial class ServiceDoc
         this DbTransaction transaction,
         TId id)
     {
-        var count = await transaction.GetScalar<int>(cb =>
-        {
-            cb.DeleteDocuments<T, TId>("Id", id);
-        });
-        if (count > 1)
-        {
-            throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
-        }
+        await new DeleteDocumentCommand<T, TId>(transaction.Connection).ExecuteAsync(id);
     }
 
     /// <summary>
@@ -89,15 +89,7 @@ public static partial class ServiceDoc
         this DbTransaction transaction,
         TId id)
     {
-        var documents = await transaction.GetDocuments<T>(cb =>
-        {
-            cb.DeleteReturnDocuments<T, TId>("Id", id);
-        });
-        if (documents.Count > 1)
-        {
-            throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
-        }
-        return documents.SingleOrDefault();
+        return await new DeleteReturnDocumentCommand<T, TId>(transaction.Connection).ExecuteAsync(id);
     }
 
     /// <summary>
@@ -111,10 +103,7 @@ public static partial class ServiceDoc
         this System.Data.Common.DbTransaction transaction,
         T document)
     {
-        await transaction.ChangeDocuments(cb =>
-        {
-            cb.SaveDocument(document);
-        });
+        await new SaveDocumentCommand<T>(transaction.Connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -128,12 +117,7 @@ public static partial class ServiceDoc
         this System.Data.Common.DbTransaction transaction,
         T document)
     {
-        var documents = await transaction.GetDocuments<T>(cb =>
-        {
-            cb.SaveReturnDocument(document);
-        });
-
-        return documents.SingleOrDefault();
+        return await new SaveReturnDocumentCommand<T>(transaction.Connection).ExecuteAsync(document);
     }
 
     /// <summary>
@@ -146,11 +130,7 @@ public static partial class ServiceDoc
     /// <returns>Document, if id matches. Otherwise null</returns>
     public static async Task<T> GetDocument<T, TId>(this System.Data.Common.DbTransaction transaction, TId id)
     {
-        var documents = await transaction.GetDocuments<T>(cb =>
-        {
-            cb.GetDocuments<T, TId>("Id", id);
-        });
-        return documents.SingleOrDefault();
+        return await new GetDocumentCommand<T, TId>(transaction.Connection).ExecuteAsync(id);
     }
 
     /// <summary>
@@ -164,10 +144,8 @@ public static partial class ServiceDoc
     /// <returns>List of matching documents</returns>
     public static async Task<List<T>> GetDocuments<T, TProp>(this DbTransaction transaction, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        return await transaction.GetDocuments<T>(cb =>
-        {
-            cb.GetDocuments(byIndexProperty, value);
-        });
+        var result = new GetDocumentsCommand<T, TProp>(transaction.Connection, byIndexProperty.PropertyName()).ExecuteAsync(value);
+        return result.ToBlockingEnumerable().ToList();
     }
 
     /// <summary>
@@ -178,9 +156,7 @@ public static partial class ServiceDoc
     /// <returns>List of all documents of type T</returns>
     public static async Task<List<T>> ListDocuments<T>(this DbTransaction transaction)
     {
-        return await transaction.GetDocuments<T>(cb =>
-        {
-            cb.ListDocuments<T>();
-        });
+        var result = new ListDocumentsCommand<T>(transaction.Connection).ExecuteAsync();
+        return result.ToBlockingEnumerable().ToList();
     }
 }
