@@ -37,7 +37,7 @@ public static partial class ServiceDoc
         return sqliteQueue.GetDocuments<T, string>(byIndexProperty, value);
     }
 
-    public static Task DeleteDocument<T>(
+    public static Task<T> DeleteDocument<T>(
         this DbQueue dbQueue,
         string id)
     {
@@ -64,7 +64,7 @@ public static partial class ServiceDoc
         return transaction.DeleteDocument<T, int>(id);
     }
 
-    public static Task DeleteDocument<T>(this DbQueue dbQueue, int id)
+    public static Task<T> DeleteDocument<T>(this DbQueue dbQueue, int id)
     {
         return dbQueue.DeleteDocument<T, int>(id);
     }
@@ -104,7 +104,7 @@ public static partial class ServiceDoc
         return transaction.DeleteDocument<T, Guid>(id);
     }
 
-    public static Task DeleteDocument<T>(this DbQueue dbQueue, Guid id)
+    public static Task<T> DeleteDocument<T>(this DbQueue dbQueue, Guid id)
     {
         return dbQueue.DeleteDocument<T, Guid>(id);
     }

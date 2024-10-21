@@ -19,7 +19,6 @@ $metapsi/Metapsi.SQLite \
 $metapsi/Metapsi.TomSelect \
 $metapsi/Metapsi.ChoicesJs \
 $metapsi/Metapsi.Timer \
-$metapsi/Metapsi.Messaging \
-$services/Metapsi.ServiceDoc)
+$metapsi/Metapsi.Messaging)
 
 echo ${projects[*]}

@@ -58,8 +58,8 @@ public static partial class ServiceDoc
         System.Linq.Expressions.Expression<Func<T, TProp>> byProperty,
         TProp value)
     {
-        var result = new DeleteReturnDocumentsCommand<T, TProp>(connection, byProperty.PropertyName()).ExecuteAsync(value);
-        return result.ToBlockingEnumerable().ToList();
+        var result = await new DeleteReturnDocumentsCommand<T, TProp>(connection, byProperty.PropertyName()).ExecuteAsync(value);
+        return result;
     }
 
     // Single document cannot be deleted outside of a transaction
@@ -116,8 +116,8 @@ public static partial class ServiceDoc
     /// <returns>List of matching documents</returns>
     public static async Task<List<T>> GetDocuments<T, TProp>(this DbConnection connection, System.Linq.Expressions.Expression<Func<T, TProp>> byIndexProperty, TProp value)
     {
-        var result = new GetDocumentsCommand<T, TProp>(connection, byIndexProperty.PropertyName()).ExecuteAsync(value);
-        return result.ToBlockingEnumerable().ToList();
+        var result = await new GetDocumentsCommand<T, TProp>(connection, byIndexProperty.PropertyName()).ExecuteAsync(value);
+        return result;
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public static partial class ServiceDoc
     /// <returns>List of all documents of type T</returns>
     public static async Task<List<T>> ListDocuments<T>(this DbConnection connection)
     {
-        var result = new ListDocumentsCommand<T>(connection).ExecuteAsync();
-        return result.ToBlockingEnumerable().ToList();
+        var result = await new ListDocumentsCommand<T>(connection).ExecuteAsync();
+        return result;
     }
 }

@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Metapsi;
 
 public static partial class ServiceDoc
 {
-    public class InsertDocumentCommand<T>
+    public class InsertDocumentCommand<T> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -26,9 +28,19 @@ public static partial class ServiceDoc
             this.DbCommand.Parameters[0].Value = Metapsi.Serialize.ToJson(document);
             await this.DbCommand.ExecuteNonQueryAsync();
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class InsertReturnDocumentCommand<T>
+    public class InsertReturnDocumentCommand<T> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -44,12 +56,24 @@ public static partial class ServiceDoc
         public async Task<T> ExecuteAsync(T document)
         {
             this.DbCommand.Parameters[0].Value = Metapsi.Serialize.ToJson(document);
-            var result = (string) await this.DbCommand.ExecuteScalarAsync();
-            return Metapsi.Serialize.FromJson<T>(result);
+            var result = await this.DbCommand.ExecuteScalarAsync();
+            if(result is string)
+                return Metapsi.Serialize.FromJson<T>(result as string);
+            return default(T);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
         }
     }
 
-    public class DeleteDocumentCommand<T, TId>
+    public class DeleteDocumentCommand<T, TId> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -65,16 +89,26 @@ public static partial class ServiceDoc
         public async Task ExecuteAsync(TId id)
         {
             this.DbCommand.Parameters[0].Value = id;
-            var count = (int)await this.DbCommand.ExecuteScalarAsync();
+            var count = await this.DbCommand.ExecuteNonQueryAsync();
 
             if (count > 1)
             {
                 throw new Exception($"{typeof(T).Name} id {id} matches multiple documents");
             }
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class DeleteReturnDocumentCommand<T, TId>
+    public class DeleteReturnDocumentCommand<T, TId> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -90,7 +124,7 @@ public static partial class ServiceDoc
         public async Task<T> ExecuteAsync(TId id)
         {
             this.DbCommand.Parameters[0].Value = id;
-            var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
 
             T result = default(T);
 
@@ -105,12 +139,21 @@ public static partial class ServiceDoc
                 var json = dbReader.GetString(0);
                 result = Metapsi.Serialize.FromJson<T>(json);
             }
-
             return result;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
         }
     }
 
-    public class DeleteDocumentsCommand<T, TProp>
+    public class DeleteDocumentsCommand<T, TProp> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -128,9 +171,19 @@ public static partial class ServiceDoc
             this.DbCommand.Parameters[0].Value = value;
             await this.DbCommand.ExecuteNonQueryAsync();
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class DeleteReturnDocumentsCommand<T, TProp>
+    public class DeleteReturnDocumentsCommand<T, TProp> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -143,10 +196,10 @@ public static partial class ServiceDoc
             DbCommand.Parameters.Add(p1);
         }
 
-        public async IAsyncEnumerable<T> ExecuteAsync(TProp value)
+        public async IAsyncEnumerable<T> IterateAsync(TProp value)
         {
             this.DbCommand.Parameters[0].Value = value;
-            var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
             while (await dbReader.ReadAsync())
             {
                 var json = dbReader.GetString(0);
@@ -154,9 +207,34 @@ public static partial class ServiceDoc
                 yield return document;
             }
         }
+
+        public async Task<List<T>> ExecuteAsync(TProp value)
+        {
+            List<T> list = new List<T>();
+            this.DbCommand.Parameters[0].Value = value;
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            while (await dbReader.ReadAsync())
+            {
+                var json = dbReader.GetString(0);
+                var document = Metapsi.Serialize.FromJson<T>(json);
+                list.Add(document);
+            }
+
+            return list;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class SaveDocumentCommand<T>
+    public class SaveDocumentCommand<T> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -174,9 +252,19 @@ public static partial class ServiceDoc
             this.DbCommand.Parameters[0].Value = Metapsi.Serialize.ToJson(document);
             await this.DbCommand.ExecuteNonQueryAsync();
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class SaveReturnDocumentCommand<T>
+    public class SaveReturnDocumentCommand<T> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -195,9 +283,19 @@ public static partial class ServiceDoc
             var result = (string)await this.DbCommand.ExecuteScalarAsync();
             return Metapsi.Serialize.FromJson<T>(result);
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class GetDocumentCommand<T, TId>
+    public class GetDocumentCommand<T, TId> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -218,9 +316,19 @@ public static partial class ServiceDoc
                 return default(T);
             return Metapsi.Serialize.FromJson<T>((string)result);
         }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class GetDocumentsCommand<T, TProp>
+    public class GetDocumentsCommand<T, TProp> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -233,10 +341,10 @@ public static partial class ServiceDoc
             DbCommand.Parameters.Add(p1);
         }
 
-        public async IAsyncEnumerable<T> ExecuteAsync(TProp value)
+        public async IAsyncEnumerable<T> IterateAsync(TProp value)
         {
             this.DbCommand.Parameters[0].Value = value;
-            var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
             while (await dbReader.ReadAsync())
             {
                 var json = dbReader.GetString(0);
@@ -244,9 +352,34 @@ public static partial class ServiceDoc
                 yield return document;
             }
         }
+
+        public async Task<List<T>> ExecuteAsync(TProp value)
+        {
+            List<T> list = new List<T>();
+            this.DbCommand.Parameters[0].Value = value;
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            while (await dbReader.ReadAsync())
+            {
+                var json = dbReader.GetString(0);
+                var document = Metapsi.Serialize.FromJson<T>(json);
+                list.Add(document);
+            }
+
+            return list;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
     }
 
-    public class ListDocumentsCommand<T>
+    public class ListDocumentsCommand<T> : IDisposable, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -256,9 +389,9 @@ public static partial class ServiceDoc
             DbCommand.CommandText = CommandBuilder.GetListDocumentsStatement(typeof(T));
         }
 
-        public async IAsyncEnumerable<T> ExecuteAsync()
+        public async IAsyncEnumerable<T> IterateAsync()
         {
-            var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
             while (await dbReader.ReadAsync())
             {
                 var json = dbReader.GetString(0);
@@ -266,5 +399,177 @@ public static partial class ServiceDoc
                 yield return document;
             }
         }
+
+        public async Task<List<T>> ExecuteAsync()
+        {
+            List<T> list = new List<T>();
+            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
+            while (await dbReader.ReadAsync())
+            {
+                var json = dbReader.GetString(0);
+                var document = Metapsi.Serialize.FromJson<T>(json);
+                list.Add(document);
+            }
+
+            return list;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return DbCommand.DisposeAsync();
+        }
+
+        public void Dispose()
+        {
+            DbCommand.Dispose();
+        }
+    }
+
+    public static async Task<InsertDocumentCommand<T>> PrepareInsertDocument<T>(this DbConnection dbConnection)
+    {
+        var command = new InsertDocumentCommand<T>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<InsertDocumentCommand<T>> PrepareInsertDocument<T>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareInsertDocument<T>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<InsertReturnDocumentCommand<T>> PrepareInsertReturnDocument<T>(this DbConnection dbConnection)
+    {
+        var command = new InsertReturnDocumentCommand<T>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<InsertReturnDocumentCommand<T>> PrepareInsertReturnDocument<T>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareInsertReturnDocument<T>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<DeleteDocumentCommand<TDocument, TId>> PrepareDeleteDocument<TDocument, TId>(this DbConnection dbConnection)
+    {
+        var command = new DeleteDocumentCommand<TDocument, TId>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<DeleteDocumentCommand<TDocument, TId>> PrepareDeleteDocument<TDocument, TId>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareDeleteDocument<TDocument, TId>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<DeleteReturnDocumentCommand<TDocument, TId>> PrepareDeleteReturnDocument<TDocument, TId>(
+        this DbConnection dbConnection)
+    {
+        var command = new DeleteReturnDocumentCommand<TDocument, TId>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<DeleteReturnDocumentCommand<TDocument, TId>> PrepareDeleteReturnDocument<TDocument, TId>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareDeleteReturnDocument<TDocument, TId>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<DeleteDocumentsCommand<TDocument, TProp>> PrepareDeleteDocuments<TDocument, TProp>(
+        this DbConnection dbConnection,
+        System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = new DeleteDocumentsCommand<TDocument, TProp>(dbConnection, byIndexProperty.PropertyName());
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<DeleteDocumentsCommand<TDocument, TProp>> PrepareDeleteDocuments<TDocument, TProp>(
+        this DbTransaction dbTransaction,
+        System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = await PrepareDeleteDocuments<TDocument, TProp>(dbTransaction.Connection, byIndexProperty);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<DeleteReturnDocumentsCommand<TDocument, TProp>> PrepareDeleteReturnDocuments<TDocument, TProp>(
+        this DbConnection dbConnection, System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = new DeleteReturnDocumentsCommand<TDocument, TProp>(dbConnection, byIndexProperty.PropertyName());
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<DeleteReturnDocumentsCommand<TDocument, TProp>> PrepareDeleteReturnDocuments<TDocument, TProp>(
+        this DbTransaction dbTransaction,
+        System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = await PrepareDeleteReturnDocuments<TDocument, TProp>(dbTransaction.Connection, byIndexProperty);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<SaveDocumentCommand<T>> PrepareSaveDocument<T>(this DbConnection dbConnection)
+    {
+        var command = new SaveDocumentCommand<T>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<SaveDocumentCommand<T>> PrepareSaveDocument<T>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareSaveDocument<T>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<SaveReturnDocumentCommand<T>> PrepareSaveReturnDocument<T>(this DbConnection dbConnection)
+    {
+        var command = new SaveReturnDocumentCommand<T>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<SaveReturnDocumentCommand<T>> PrepareSaveReturnDocument<T>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareSaveReturnDocument<T>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<GetDocumentCommand<TDocument, TId>> PrepareGetDocument<TDocument, TId>(this DbConnection dbConnection)
+    {
+        var command = new GetDocumentCommand<TDocument, TId>(dbConnection);
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<GetDocumentCommand<TDocument, TId>> PrepareGetDocument<TDocument, TId>(this DbTransaction dbTransaction)
+    {
+        var command = await PrepareGetDocument<TDocument, TId>(dbTransaction.Connection);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
+    }
+
+    public static async Task<GetDocumentsCommand<TDocument, TProp>> PrepareGetDocuments<TDocument, TProp>(this DbConnection dbConnection, System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = new GetDocumentsCommand<TDocument, TProp>(dbConnection, byIndexProperty.PropertyName());
+        await command.DbCommand.PrepareAsync();
+        return command;
+    }
+
+    public static async Task<GetDocumentsCommand<TDocument, TProp>> PrepareGetDocuments<TDocument, TProp>(this DbTransaction dbTransaction, System.Linq.Expressions.Expression<Func<TDocument, TProp>> byIndexProperty)
+    {
+        var command = await PrepareGetDocuments<TDocument, TProp>(dbTransaction.Connection, byIndexProperty);
+        command.DbCommand.Transaction = dbTransaction;
+        return command;
     }
 }
