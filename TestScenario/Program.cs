@@ -162,7 +162,7 @@ public static class Program
 
         // 16427 ms
 
-        Task.Run(async () =>
+        await Task.Run(async () =>
         {
             await dbQueue.SqliteQueue.Enqueue(async c => await c.ExecuteAsync($"delete from {ServiceDoc.GetTableName(typeof(TestEntity))}"));
             int count = 1000;
@@ -171,7 +171,7 @@ public static class Program
             {
                 for (int i = 0; i < count; i++)
                 {
-                    await t.SaveDocument(new TestEntity()
+                    var d = await t.SaveReturnDocument(new TestEntity()
                     {
                         Data = new TestEntity.NestedData()
                         {
@@ -186,6 +186,10 @@ public static class Program
             sw.Stop();
             Console.WriteLine($"{count} entities with SqliteTransaction.SaveDocument {sw.ElapsedMilliseconds} ms");
         });
+
+        var del1 = await dbQueue.DeleteDocument<TestEntity>(2001);
+
+        await dbQueue.SqliteQueue.DeleteDocument<TestEntity, int>(2002);
 
         //Task.Run(async () =>
         //{
