@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
-  <PropertyGroup Condition="$(SolutionFileName) != 'metapsi.services.sln'">
+  <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.dev.sln'">
   	<MetapsiVersion>0.0.0-dev</MetapsiVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.sln'">
   	<MetapsiVersion>*</MetapsiVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <MetapsiVersion>*</MetapsiVersion>
   </PropertyGroup>
 
 	<Target Name="NugetVersion" AfterTargets="Build" >
