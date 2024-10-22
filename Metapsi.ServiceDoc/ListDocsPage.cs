@@ -413,6 +413,91 @@ namespace Metapsi
             return b.Includes(b.ToLowercase(b.ConcatObjectValues(item)), b.ToLowercase(value));
         }
 
+        public class EnumProperty
+        {
+            public string PropertyName { get; set; }
+            public string PropertyType { get; set; }
+            public List<EnumValue> EnumValues { get; set; } = new List<EnumValue>();
+        }
+
+        public class EnumValue
+        {
+            public string Name { get; set; }
+            public int Value { get; set; }
+        }
+
+        public static Var<string> GetEnumValueName<T>(this SyntaxBuilder b, Var<string> columnName, Var<int> value)
+        {
+            List<EnumProperty> enumProperties = new List<EnumProperty>();
+            foreach (var enumProperty in LocalControls.GetEnumProperties(typeof(T)))
+            {
+                EnumProperty toAdd = new EnumProperty()
+                {
+                    PropertyName = enumProperty.Name,
+                    PropertyType = enumProperty.PropertyType.Name
+                };
+                var enumType = enumProperty.PropertyType;
+                var enumValues = enumType.GetEnumValues();
+                for (int i = 0; i < enumValues.Length; i++)
+                {
+                    toAdd.EnumValues.Add(new EnumValue()
+                    {
+                        Name = enumValues.GetValue(i).ToString(),
+                        Value = i
+                    });
+                }
+                enumProperties.Add(toAdd);
+            }
+
+            var allEnums = b.Const(enumProperties);
+
+            var propertyValues = b.Get(
+                allEnums,
+                columnName,
+                (allProperties, columnName) => allProperties.Single(x => x.PropertyName == columnName));
+
+            var valueName = b.Get(propertyValues, value, (propertyValues, value) => propertyValues.EnumValues.Single(x => x.Value == value));
+            return b.Get(valueName, x => x.Name);
+        }
+
+        public static Var<Func<T, string, IVNode>> DefGetReadOnlyControl<T>(this SyntaxBuilder b)
+        {
+            return b.Def((LayoutBuilder b, Var<T> document, Var<string> column) =>
+            {
+                var boolProperties = LocalControls.GetBoolProperties(typeof(T));
+                var enumProperties = LocalControls.GetEnumProperties(typeof(T));
+
+                var boolPropertyNames = b.Const(boolProperties.Select(x => x.Name).ToList());
+                var enumPropertyNames = b.Const(enumProperties.Select(x => x.Name).ToList());
+
+                return b.If(
+                    b.ContainsValue(boolPropertyNames, column),
+                b =>
+                {
+                    var value = b.GetProperty<bool>(document, column);
+                    return b.SlCheckbox(
+                        b =>
+                        {
+                            b.SetSizeSmall();
+                            b.SetDisabled();
+                            b.SetChecked(value);
+                        });
+                },
+                b => b.If(
+                    b.ContainsValue(enumPropertyNames, column),
+                    b =>
+                    {
+                        var value = b.GetProperty<int>(document, column);
+                        var name = b.Call(GetEnumValueName<T>, column, value);
+                        return b.Text(b.Concat(name, b.Const(" ("), b.AsString(value), b.Const(")")));
+                    },
+                        b =>
+                        {
+                            return b.Text(b.GetProperty<string>(document, column));
+                        }));
+            });
+        }
+
         public static Var<IVNode> DocsGrid<T, TId>(
             this LayoutBuilder b,
             Var<ListDocsPage<T>> model,
@@ -431,6 +516,35 @@ namespace Metapsi
                             var filteredRows = b.FilterList(b.Get(model, x => x.Documents), b.Get(model, x => x.FilterText));
 
                             var gridBuilder = DataGridBuilder.DataGrid<T>();
+
+                            foreach (var boolProperty in LocalControls.GetBoolProperties(typeof(T)))
+                            {
+                                gridBuilder.DataTableBuilder.OverrideDataCell(
+                                    boolProperty.Name,
+                                    (b, entity) =>
+                                    {
+                                        var value = b.GetProperty<bool>(entity, boolProperty.Name);
+                                        return b.SlCheckbox(
+                                            b =>
+                                            {
+                                                b.SetDisabled();
+                                                b.SetChecked(value);
+                                            });
+                                    });
+                            }
+
+                            foreach (var enumProperty in LocalControls.GetEnumProperties(typeof(T)))
+                            {
+                                gridBuilder.DataTableBuilder.OverrideDataCell(
+                                    enumProperty.Name,
+                                    (b, entity) =>
+                                    {
+                                        var value = b.GetProperty<int>(entity, enumProperty.Name);
+                                        var name = b.Call(GetEnumValueName<T>, b.Const(enumProperty.Name), value);
+                                        return b.Text(b.Concat(name, b.Const(" ("), b.AsString(value), b.Const(")")));
+                                    });
+                            }
+
                             gridBuilder.AddRowAction((b, item) => b.EditDocumentButton(item, idProperty));
                             gridBuilder.AddRowAction((b, item) => b.DeleteDocumentButton(item, idProperty));
                             var dataGrid = b.DataGrid(gridBuilder, filteredRows, b.Get(model, x => x.Columns));
@@ -470,12 +584,12 @@ namespace Metapsi
                                                                     b.SetClass("text-sm text-gray-600");
                                                                 },
                                                                 column),
-                                                            b.HtmlSpanText(
+                                                            b.HtmlSpan(
                                                                 b =>
                                                                 {
                                                                     b.SetClass("text-gray-800");
                                                                 },
-                                                                b.GetProperty<string>(document, column)));
+                                                                b.Call(b.DefGetReadOnlyControl<T>(), document, column)));
                                                     })),
                                             b.HtmlDiv(
                                                 b =>

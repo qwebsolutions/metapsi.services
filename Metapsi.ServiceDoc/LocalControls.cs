@@ -4,6 +4,8 @@ using System;
 using Metapsi.Shoelace;
 using System.Linq.Expressions;
 using Metapsi.Html;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Metapsi
 {
@@ -26,6 +28,18 @@ namespace Metapsi
         {
             var x = Expression.Parameter(typeof(TEntity), "x");
             return Expression.Lambda<Func<TEntity, bool>>(Expression.Property(x, propertyName), x);
+        }
+
+        public static IEnumerable<System.Reflection.PropertyInfo> GetBoolProperties(Type type)
+        {
+            var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            return properties.Where(x=>x.PropertyType == typeof(bool));
+        }
+
+        public static IEnumerable<System.Reflection.PropertyInfo> GetEnumProperties(Type type)
+        {
+            var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            return properties.Where(x => x.PropertyType.IsEnum);
         }
 
         public static Var<IVNode> AutoEditForm<TModel, TEntity>(
@@ -71,6 +85,39 @@ namespace Metapsi
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
                             b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), StringPropertyExpression<TEntity>(property.Name));
                         });
+                    b.Push(editControls, input);
+                }
+                else if (property.PropertyType.IsEnum)
+                {
+                    Dictionary<string, int> enumOptions = new Dictionary<string, int>();
+
+                    var options = b.NewCollection<IVNode>();
+
+                    var enumValues = property.PropertyType.GetEnumValues();
+                    for (int i = 0; i < enumValues.Length; i++)
+                    {
+                        b.Push(options, b.SlOption(
+                            b =>
+                            {
+                                b.SetValue(i.ToString());
+                            },
+                            b.Text(enumValues.GetValue(i).ToString())));
+                    }
+
+                    var input = b.SlSelect(
+                        b =>
+                        {
+                            b.SetLabel(b.FormatLabel(b.Const(property.Name)));
+                            b.OnSlChange((SyntaxBuilder b, Var<TModel> model, Var<DomEvent> domEvent) =>
+                            {
+                                var selectedValue = b.NavigateProperties<DomEvent, string>(domEvent, "target", "value");
+                                b.SetProperty(entity, b.Const(property.Name), b.ParseInt(selectedValue));
+                                return b.Clone(model);
+                            });
+                            var currentValue = b.AsString(b.GetProperty<int>(entity, b.Const(property.Name)));
+                            b.SetValue(currentValue);
+                        },
+                        options);
                     b.Push(editControls, input);
                 }
             }

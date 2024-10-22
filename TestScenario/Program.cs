@@ -10,6 +10,12 @@ using System.Data.SQLite;
 
 public static class Program
 {
+    public enum TestEnum
+    {
+        Value1,
+        Value2
+    }
+
     public class TestEntity
     {
         public class NestedData
@@ -17,9 +23,12 @@ public static class Program
             public Guid GuidProperty { get; set; }
         }
 
+        public bool BoolProperty { get; set; }
+
         public int Id { get; set; }
         public string StringProperty { get; set; }
         public NestedData Data { get; set; } = new NestedData();
+        public TestEnum TestEnum { get; set; }
     }
 
     public class TestEntityStringKey
@@ -82,6 +91,8 @@ public static class Program
                     });
             });
         app.Urls.Add("http://localhost:5000");
+        await StaticFiles.AddAll(typeof(Metapsi.Html.Binding).Assembly);
+        await StaticFiles.AddAll(typeof(Metapsi.ServiceDoc).Assembly);
         app.RunAsync();
 
 
