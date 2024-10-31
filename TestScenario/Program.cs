@@ -91,8 +91,6 @@ public static class Program
                     });
             });
         app.Urls.Add("http://localhost:5000");
-        await StaticFiles.AddAll(typeof(Metapsi.Html.Binding).Assembly);
-        await StaticFiles.AddAll(typeof(Metapsi.ServiceDoc).Assembly);
         app.RunAsync();
 
 

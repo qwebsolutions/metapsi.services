@@ -214,6 +214,8 @@ namespace Metapsi
             DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
+            await EmbeddedFiles.AddAsync(typeof(Metapsi.ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
+
             var propsConfigurator = new DocsGroup()
             {
                 dbQueue = dbQueue,

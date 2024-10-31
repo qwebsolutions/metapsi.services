@@ -94,8 +94,7 @@ public static partial class SignInService
     public static void SignInUserPasswordPage(HtmlBuilder b, SignInUserPasswordModel model)
     {
         b.AddModuleStylesheet();
-        StaticFiles.AddAll(typeof(HyperType).Assembly);
-        StaticFiles.AddAll(typeof(SignInUserPasswordModel).Assembly);
+        EmbeddedFiles.AddAll(typeof(SignInUserPasswordModel).Assembly);
 
         b.Document.Body.SetAttribute("class", "w-screen h-screen");
         b.BodyAppend(
