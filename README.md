@@ -32,11 +32,11 @@ public static class ServiceDocSample
         
         // Create db access queue
         var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(System.IO.Path.GetTempFileName()));
-        Converters.RegisterAll();
         await webApp.UseDocs(
             dbQueue,
             b =>
             {
+                // Register documents with their unique key property
                 b.AddDoc<User>(x => x.Id);
             });
 
