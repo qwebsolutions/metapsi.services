@@ -208,7 +208,7 @@ public static partial class SignInService
                                 signInForm,
                                 "addEventListener",
                                 b.Const("submit"),
-                                b.Def((SyntaxBuilder b, Var<DomEvent> domEvent) =>
+                                b.Def((SyntaxBuilder b, Var<Event> domEvent) =>
                                 {
                                     var userNameInput = b.GetElementById(b.Const("id-user-name-input"));
                                     var userNameValue = b.GetProperty<string>(userNameInput, "value");

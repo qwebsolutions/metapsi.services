@@ -108,9 +108,9 @@ namespace Metapsi
                         b =>
                         {
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
-                            b.OnSlChange((SyntaxBuilder b, Var<TModel> model, Var<DomEvent> domEvent) =>
+                            b.OnSlChange((SyntaxBuilder b, Var<TModel> model, Var<Event> domEvent) =>
                             {
-                                var selectedValue = b.NavigateProperties<DomEvent, string>(domEvent, "target", "value");
+                                var selectedValue = b.NavigateProperties<Event, string>(domEvent, "target", "value");
                                 b.SetProperty(entity, b.Const(property.Name), b.ParseInt(selectedValue));
                                 return b.Clone(model);
                             });

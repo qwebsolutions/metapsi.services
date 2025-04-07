@@ -199,7 +199,7 @@ namespace Metapsi
                 });
 
             var onError = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<Html.Error> apiError) =>
                 {
                     b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
@@ -212,19 +212,10 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
-                {
-                    b.GetJson<T>(
-                        b.Get(model, x=>x.InitApiUrl),
-                        b.Def((SyntaxBuilder b, Var<T> newDocument) =>
-                        {
-                            b.Dispatch(dispatch, onResult, newDocument);
-                        }),
-                        b.Def((SyntaxBuilder b, Var<ClientSideException> ex) =>
-                        {
-                            b.Dispatch(dispatch, onError, ex);
-                        }));
-                });
+                b.GetJsonEffect(
+                    b.Get(model, x => x.InitApiUrl),
+                    onResult,
+                    onError));
         }
 
         public static Var<HyperType.StateWithEffects> SaveDocument<T>(SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model)
@@ -244,7 +235,7 @@ namespace Metapsi
                 });
 
             var onError = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<Html.Error> apiError) =>
                 {
                     b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
@@ -257,20 +248,11 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
-                {
-                    b.PostJson(
-                        b.Get(model, x=>x.SaveApiUrl),
-                        b.Get(model, x => x.EditDocument),
-                        b.Def((SyntaxBuilder b, Var<SaveResult> saveMessage) =>
-                        {
-                            b.Dispatch(dispatch, onResult, saveMessage);
-                        }),
-                        b.Def((SyntaxBuilder b, Var<ClientSideException> ex) =>
-                        {
-                            b.Dispatch(dispatch, onError, ex);
-                        }));
-                });
+                b.PostJsonEffect(
+                    b.Get(model, x => x.SaveApiUrl),
+                    b.Get(model, x => x.EditDocument),
+                    onResult,
+                    onError));
         }
 
 
@@ -296,7 +278,7 @@ namespace Metapsi
                 });
 
             var onError = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<Html.Error> apiError) =>
                 {
                     b.Alert(b.Get(apiError, x => x.message));
                     var editPopup = b.GetElementById(b.Const(IdEditDocument));
@@ -309,7 +291,7 @@ namespace Metapsi
 
             return b.MakeStateWithEffects(
                 model,
-                b.PostJson(
+                b.PostJsonEffect(
                     b.Get(model, x => x.DeleteApiUrl),
                     b.Get(model, x => x.EditDocument),
                     onResult,
@@ -328,7 +310,7 @@ namespace Metapsi
                     });
 
                 var onError = b.MakeAction(
-                    (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<ClientSideException> apiError) =>
+                    (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<Html.Error> apiError) =>
                     {
                         b.Alert(b.Get(apiError, x => x.message));
                         return b.Clone(model);
@@ -336,19 +318,10 @@ namespace Metapsi
 
                 return b.MakeStateWithEffects(
                     model,
-                    (SyntaxBuilder b, Var<HyperType.Dispatcher> dispatch) =>
-                    {
-                        b.GetJson<List<T>>(
-                            b.Get(model, x=>x.ListApiUrl),
-                            b.Def((SyntaxBuilder b, Var<List<T>> newList) =>
-                            {
-                                b.Dispatch(dispatch, onResult, newList);
-                            }),
-                            b.Def((SyntaxBuilder b, Var<ClientSideException> ex) =>
-                            {
-                                b.Dispatch(dispatch, onError, ex);
-                            }));
-                    });
+                    b.GetJsonEffect(
+                        b.Get(model, x => x.ListApiUrl),
+                        onResult,
+                        onError));
             });
         }
 
