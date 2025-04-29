@@ -56,6 +56,16 @@ public static class JsonSchemaExtensions
         }
         else
         {
+            if (type == typeof(Guid))
+            {
+                outType.type = "string";
+            }
+            else
+            if (type.IsEnum)
+            {
+                outType.type = "integer";
+            }
+            else
             if (type.Name == "List`1")
             {
                 outType.type = "array";

@@ -403,8 +403,6 @@ public static partial class JsonEditorExtensions
 
     public static Var<IVNode> JsonEditorNodeLabel(this LayoutBuilder b, Var<JsonEditorDataNode> node)
     {
-        b.Log("node", node);
-
         var nodeType = b.Get(node, x => x.SchemaType.type);
 
         return b.JsonEditorSwitchType(

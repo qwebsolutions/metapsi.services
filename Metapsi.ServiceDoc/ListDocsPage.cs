@@ -265,8 +265,8 @@ public static partial class ServiceDoc
         b.Set(
             model, x=>x.EditDocument,
             b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
-        b.Log("EditDocument", b.Get(model, x => x.EditDocument));
-
+        b.Log(b.Get(model, x => x.EditDocument));
+        
         return b.MakeStateWithEffects(
             model,
             b.PostJsonEffect(
@@ -450,8 +450,11 @@ public static partial class ServiceDoc
             columnName,
             (allProperties, columnName) => allProperties.Single(x => x.PropertyName == columnName));
 
-        var valueName = b.Get(propertyValues, value, (propertyValues, value) => propertyValues.EnumValues.Single(x => x.Value == value));
-        return b.Get(valueName, x => x.Name);
+        var valueName = b.Get(propertyValues, value, (propertyValues, value) => propertyValues.EnumValues.SingleOrDefault(x => x.Value == value));
+        return b.If(
+            b.HasObject(valueName),
+            b => b.Get(valueName, x => x.Name),
+            b => b.Const("[Invalid enum]"));
     }
 
     public static Var<Func<T, string, IVNode>> DefGetReadOnlyControl<T>(this SyntaxBuilder b)
