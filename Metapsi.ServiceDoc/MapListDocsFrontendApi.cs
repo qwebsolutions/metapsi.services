@@ -59,6 +59,7 @@ namespace Metapsi
                 return Page.Result(
                     new ListDocsPage<T>()
                     {
+                        DocumentSchema = JsonSchemaExtensions.GetJsonSchemaType(typeof(T)),
                         InitApiUrl = linkGenerator.GetPathByName(httpContext, Frontend.InitApiEndpointName<T>()),
                         ListApiUrl = linkGenerator.GetPathByName(httpContext, Frontend.ListApiEndpointName<T>()),
                         SaveApiUrl = linkGenerator.GetPathByName(httpContext, Frontend.SaveApiEndpointName<T>()),
@@ -70,7 +71,7 @@ namespace Metapsi
             });
             pageRoute.WithName(Frontend.DocumentPageEndpointName<T>());
 
-            ConfigureRoute(pageRoute, docsGroup, props);
+            //ConfigureRoute(pageRoute, docsGroup, props);
 
             var initRoute = endpoint.MapGet(
                 Frontend.Url.Init,
@@ -104,30 +105,30 @@ namespace Metapsi
                 });
             deleteRoute.WithName(Frontend.DeleteApiEndpointName<T>());
 
-            if (props.DocumentRoutesBuilder == null)
-            {
-                if (docsGroup.GroupRoutesBuilder == null)
-                {
-                    initRoute.AllowAnonymous();
-                    listRoute.AllowAnonymous();
-                    saveRoute.AllowAnonymous();
-                    deleteRoute.AllowAnonymous();
-                }
-                else
-                {
-                    docsGroup.GroupRoutesBuilder(initRoute);
-                    docsGroup.GroupRoutesBuilder(listRoute);
-                    docsGroup.GroupRoutesBuilder(saveRoute);
-                    docsGroup.GroupRoutesBuilder(deleteRoute);
-                }
-            }
-            else
-            {
-                props.DocumentRoutesBuilder(initRoute);
-                props.DocumentRoutesBuilder(listRoute);
-                props.DocumentRoutesBuilder(saveRoute);
-                props.DocumentRoutesBuilder(deleteRoute);
-            }
+            //if (props.DocumentRoutesBuilder == null)
+            //{
+            //    if (docsGroup.GroupRoutesBuilder == null)
+            //    {
+            //        initRoute.AllowAnonymous();
+            //        listRoute.AllowAnonymous();
+            //        saveRoute.AllowAnonymous();
+            //        deleteRoute.AllowAnonymous();
+            //    }
+            //    else
+            //    {
+            //        docsGroup.GroupRoutesBuilder(initRoute);
+            //        docsGroup.GroupRoutesBuilder(listRoute);
+            //        docsGroup.GroupRoutesBuilder(saveRoute);
+            //        docsGroup.GroupRoutesBuilder(deleteRoute);
+            //    }
+            //}
+            //else
+            //{
+            //    props.DocumentRoutesBuilder(initRoute);
+            //    props.DocumentRoutesBuilder(listRoute);
+            //    props.DocumentRoutesBuilder(saveRoute);
+            //    props.DocumentRoutesBuilder(deleteRoute);
+            //}
         }
 
         internal static class Frontend

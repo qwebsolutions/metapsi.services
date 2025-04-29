@@ -21,7 +21,7 @@ public static class ChatServiceExtensions
         ImplementationGroup ig,
         ServiceDoc.DbQueue dbQueue)
     {
-        var overviewRoute = await endpoint.UseDocs(
+        var overviewRoute = await endpoint.MapGroup("docs").UseDocs(
             dbQueue,
             b =>
             {

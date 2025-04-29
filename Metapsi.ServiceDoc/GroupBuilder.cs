@@ -22,9 +22,9 @@ namespace Metapsi
 
             internal List<Func<Task>> registerDocs = new();
             internal List<Func<HttpContext, Task<DocTypeOverview>>> getOverview = new();
-            internal IEndpointRouteBuilder uiEndpoint { get; set; }
+            internal RouteGroupBuilder groupEndpoint { get; set; }
             internal DbQueue dbQueue { get; set; }
-            internal string overviewUrl { get; set; } = "docs";
+            internal string overviewUrl { get; set; } = "/";
             internal bool SetJournalWal = true;
             public Action<RouteHandlerBuilder> GroupRoutesBuilder { get; set; }
         }
@@ -108,7 +108,7 @@ namespace Metapsi
             };
 
             var typeName = typeof(T).Name;
-            var typeEndpoint = docsGroup.uiEndpoint.MapGroup(typeName);
+            var typeEndpoint = docsGroup.groupEndpoint.MapGroup(typeName);
 
             docsGroup.registerDocs.Add(async () =>
             {
@@ -210,7 +210,7 @@ namespace Metapsi
         }
 
         public static async Task<RouteHandlerBuilder> UseDocs(
-            this IEndpointRouteBuilder uiEndpoint,
+            this RouteGroupBuilder groupEndpoint,
             DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
@@ -219,7 +219,7 @@ namespace Metapsi
             var propsConfigurator = new DocsGroup()
             {
                 dbQueue = dbQueue,
-                uiEndpoint = uiEndpoint
+                groupEndpoint = groupEndpoint
             };
             setProps(propsConfigurator);
             if (propsConfigurator.SetJournalWal)
@@ -233,8 +233,8 @@ namespace Metapsi
                 await registerDoc();
             }
 
-            uiEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
-            var docsRoute = uiEndpoint.MapGet(propsConfigurator.overviewUrl, async (HttpContext httpContext) =>
+            groupEndpoint.Render<DocsOverviewModel>(ServiceDoc.Render);
+            var docsRoute = groupEndpoint.MapGet(propsConfigurator.overviewUrl, async (HttpContext httpContext) =>
             {
                 var docsOverviewModel = new DocsOverviewModel();
                 foreach (var getOverview in propsConfigurator.getOverview)
@@ -276,32 +276,32 @@ namespace Metapsi
             });
         }
 
-        private static void ConfigureRoute<T>(RouteHandlerBuilder route, DocsGroup docsGroup, DocumentProps<T> documentProps)
-        {
-            if (documentProps.DocumentRoutesBuilder == null)
-            {
-                if (docsGroup.GroupRoutesBuilder == null)
-                {
-                    route.AllowAnonymous();
-                }
-                else
-                {
-                    docsGroup.GroupRoutesBuilder(route);
-                }
-            }
-            else
-            {
-                documentProps.DocumentRoutesBuilder(route);
-            }
-        }
+        //private static void ConfigureRoute<T>(RouteHandlerBuilder route, DocsGroup docsGroup, DocumentProps<T> documentProps)
+        //{
+        //    if (documentProps.DocumentRoutesBuilder == null)
+        //    {
+        //        if (docsGroup.GroupRoutesBuilder == null)
+        //        {
+        //            route.AllowAnonymous();
+        //        }
+        //        else
+        //        {
+        //            docsGroup.GroupRoutesBuilder(route);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        documentProps.DocumentRoutesBuilder(route);
+        //    }
+        //}
 
         private static void ConfigureApiRoute(RouteHandlerBuilder route)
         {
-            route.RequireAuthorization(options =>
-            {
-                options.AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme);
-                options.RequireAuthenticatedUser();
-            });
+            //route.RequireAuthorization(options =>
+            //{
+            //    options.AddAuthenticationSchemes(CookieAuthenticationDefaults.AuthenticationScheme);
+            //    options.RequireAuthenticatedUser();
+            //});
         }
     }
 }
