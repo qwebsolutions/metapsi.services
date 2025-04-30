@@ -36,6 +36,12 @@ namespace Metapsi
             return properties.Where(x=>x.PropertyType == typeof(bool));
         }
 
+        public static IEnumerable<System.Reflection.PropertyInfo> GetCollectionProperties(Type type)
+        {
+            var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            return properties.Where(x => x.PropertyType.IsAssignableTo(typeof(System.Collections.IList)));
+        }
+
         public static IEnumerable<System.Reflection.PropertyInfo> GetEnumProperties(Type type)
         {
             var properties = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);

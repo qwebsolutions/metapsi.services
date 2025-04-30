@@ -49,7 +49,7 @@ public class UnitTest1
         var appBuilder = WebApplication.CreateBuilder().AddMetapsi(serviceSetup.ApplicationSetup, ig);
         var app = appBuilder.Build().UseMetapsi(serviceSetup.ApplicationSetup);
 
-        var configurationUrl = await app.UseDocs(
+        var configurationUrl = await app.MapGroup("docs").UseDocs(
             new ServiceDoc.DbQueue(new SqliteQueue(configurationDb)),
             b =>
             {

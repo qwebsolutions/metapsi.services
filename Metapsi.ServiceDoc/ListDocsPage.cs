@@ -113,6 +113,18 @@ public static partial class ServiceDoc
                     })));
     }
 
+    public static Reference<bool> isInRawEdit = new Reference<bool>() { Value = false };
+
+    public static Var<bool> IsInRawEdit(this SyntaxBuilder b)
+    {
+        return b.GetRef(b.Const(isInRawEdit));
+    }
+
+    public static void SetRawEdit(this SyntaxBuilder b, Var<bool> value)
+    {
+        b.SetRef(b.Const(isInRawEdit), value);
+    }
+
     public static Var<IVNode> EditDocumentPopup<T, TId>(
         this LayoutBuilder b,
         Var<ServiceDoc.ListDocsPage<T>> model,
@@ -123,41 +135,130 @@ public static partial class ServiceDoc
         var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
 
         //var buildContent = (LayoutBuilder b) => b.AutoEditForm(model, b.Get(model, x => x.EditDocument));
-        var buildContent = (LayoutBuilder b) => b.HtmlDiv(
+        var buildContent = (LayoutBuilder b) =>
+        b.If(
+            b.IsInRawEdit(),
             b =>
             {
-                b.AddClass("flex md:flex-row md:justify-between gap-4 flex-col items-stretch");
+                return b.RawEditTextArea(model);
             },
-            b.JsonEditor(b.JsonEditorGetRootNode()),
-            b.JsonEditorPreview(b.JsonEditorGetRootNode()));
+            b =>
+            {
+                return b.HtmlDiv(
+                    b =>
+                    {
+                        b.AddClass("flex md:flex-row md:justify-between gap-4 flex-col items-stretch");
+                    },
+                    b.JsonEditor(b.JsonEditorGetRootNode()),
+                    b.JsonEditorPreview(b.JsonEditorGetRootNode()));
+            });
         return b.SlDialog(
             b =>
             {
                 b.AddStyle("--width", "800px");
                 b.SetId(b.Const(IdEditDocument));
-                b.SetLabel(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))));
+                //b.SetLabel());
             },
+            b.Optional(
+                b.HasObject(
+                    b.Get(model, x => x.EditDocument)),
+                    b =>
+                    {
+                        return b.HtmlDiv(
+                            b =>
+                            {
+                                b.SetSlot(SlDialog.Slot.Label);
+                                b.AddClass("flex flex-row gap-8 items-center");
+                            },
+                            b.HtmlDiv(b.Text(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))))),
+                            b.HtmlDiv(
+                                b.SlCheckbox(
+                                    b =>
+                                    {
+                                        b.SetChecked(b.IsInRawEdit());
+                                        b.OnSlChange((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
+                                        {
+                                            b.SetRawEdit(b.GetTargetChecked(e));
+                                            return b.Clone(model);
+                                        });
+                                    },
+                                    b.Text("Raw"))));
+                    }),
             b.Optional(
                 b.HasObject(b.Get(model, x => x.EditDocument)),
                 b => b.Call(buildContent)),
-            b.HtmlDiv(
+            b.If(
+                b.IsInRawEdit(),
                 b =>
                 {
-                    b.SetSlot("footer");
-                    b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
+                    // Raw edit does not show node options and does not extract json from editor
+                    return b.SlButton(
+                        b =>
+                        {
+                            b.SetSlot(SlDialog.Slot.Footer);
+                            b.SetVariantPrimary();
+
+                            b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                            {
+                                return SaveDocument(b, model);
+                            }));
+                        },
+                        b.Text("Save"));
                 },
-                b.JsonEditorSelectedNodeOptions(),
-                b.SlButton(
+                b =>
+                {
+                    return b.HtmlDiv(
+                        b =>
+                        {
+                            b.SetSlot("footer");
+                            b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
+                        },
+                        b.JsonEditorSelectedNodeOptions(),
+                        b.SlButton(
+                            b =>
+                            {
+                                b.SetVariantPrimary();
+
+                                b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                                {
+                                    // Extracts the json from the editor
+                                    b.Set(
+                                        model, x => x.EditDocument,
+                                        b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
+                                    b.Log(b.Get(model, x => x.EditDocument));
+
+                                    return SaveDocument(b, model);
+                                }));
+                            },
+                    b.Text("Save")));
+                }));
+    }
+
+    public static Var<IVNode> RawEditTextArea<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
+    {
+        var editDoc = b.Get(model, x => x.EditDocument);
+        return b.Optional(
+            b.HasObject(editDoc),
+            b =>
+            {
+                var json = b.JsonStringify(
+                    editDoc, 
+                    b=>
+                    {
+                        b.SetSpace(b.Const(2));
+                    });
+                return b.SlTextarea(
                     b =>
                     {
-                        b.SetVariantPrimary();
-
-                        b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                        b.SetRows(12);
+                        b.SetValue(json);
+                        b.OnSlChange(b.MakeAction((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
                         {
-                            return SaveDocument(b, model);
+                            b.Set(model, x => x.EditDocument, b.Deserialize<T>(b.GetTargetValue(e)));
+                            return b.Clone(model);
                         }));
-                    },
-                    b.Text("Save"))));
+                    });
+            });
     }
 
 
@@ -261,11 +362,6 @@ public static partial class ServiceDoc
                 b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
                 return b.RefreshAllDocuments<T>();
             });
-
-        b.Set(
-            model, x=>x.EditDocument,
-            b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
-        b.Log(b.Get(model, x => x.EditDocument));
         
         return b.MakeStateWithEffects(
             model,
@@ -539,6 +635,18 @@ public static partial class ServiceDoc
                                     var value = b.GetProperty<int>(entity, enumProperty.Name);
                                     var name = b.Call(GetEnumValueName<T>, b.Const(enumProperty.Name), value);
                                     return b.Text(b.Concat(name, b.Const(" ("), b.AsString(value), b.Const(")")));
+                                });
+                        }
+
+                        foreach (var collectionProperty in LocalControls.GetCollectionProperties(typeof(T)))
+                        {
+                            gridBuilder.DataTableBuilder.OverrideDataCell(
+                                collectionProperty.Name,
+                                (b, entity) =>
+                                {
+                                    var collection = b.GetProperty<List<DynamicObject>>(entity, collectionProperty.Name);
+                                    var length = b.Get(collection, x => x.Count());
+                                    return b.Text(b.Concat(b.AsString(length), b.Const(" items")));
                                 });
                         }
 
