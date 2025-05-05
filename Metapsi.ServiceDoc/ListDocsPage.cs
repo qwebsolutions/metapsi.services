@@ -311,7 +311,7 @@ public static partial class ServiceDoc
             {
                 b.Set(model, x => x.EditDocument, result);
                 var popup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(popup, DynamicProperty.Bool("open"), b.Const(true));
+                b.SetProperty(popup, b.Const("open"), b.Const(true));
                 return b.Clone(model);
             });
 
@@ -320,10 +320,10 @@ public static partial class ServiceDoc
             {
                 b.Alert(b.Get(apiError, x => x.message));
                 var editPopup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(editPopup, b.Const("open"), b.Const(false));
 
                 var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
-                b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(removePopup, b.Const("open"), b.Const(false));
                 return b.Clone(model);
             });
 
@@ -342,10 +342,10 @@ public static partial class ServiceDoc
             {
                 b.ToastResult(b.Get(saveResult, x => x.Success), b.Get(saveResult, x => x.Message));
                 var editPopup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(editPopup, b.Const("open"), b.Const(false));
 
                 var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
-                b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(removePopup, b.Const("open"), b.Const(false));
 
                 b.Push(b.Get(model, x => x.Documents), b.Get(model, x => x.EditDocument));
                 return b.RefreshAllDocuments<T>();
@@ -356,10 +356,10 @@ public static partial class ServiceDoc
             {
                 b.Alert(b.Get(apiError, x => x.message));
                 var editPopup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(editPopup, b.Const("open"), b.Const(false));
 
                 var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
-                b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(removePopup, b.Const("open"), b.Const(false));
                 return b.RefreshAllDocuments<T>();
             });
         
@@ -386,10 +386,10 @@ public static partial class ServiceDoc
                 b.ToastResult(b.Get(deleteResult, x => x.Success), b.Get(deleteResult, x => x.Message));
 
                 var editPopup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(editPopup, b.Const("open"), b.Const(false));
 
                 var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
-                b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(removePopup, b.Const("open"), b.Const(false));
 
                 return b.RefreshAllDocuments<T>();
             });
@@ -399,10 +399,10 @@ public static partial class ServiceDoc
             {
                 b.Alert(b.Get(apiError, x => x.message));
                 var editPopup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetDynamic(editPopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(editPopup, b.Const("open"), b.Const(false));
 
                 var removePopup = b.GetElementById(b.Const(IdRemoveDocument));
-                b.SetDynamic(removePopup, DynamicProperty.Bool("open"), b.Const(false));
+                b.SetProperty(removePopup, b.Const("open"), b.Const(false));
                 return b.RefreshAllDocuments<T>();
             });
 
@@ -731,7 +731,7 @@ public static partial class ServiceDoc
                         b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
 
                         var popup = b.GetElementById(b.Const(IdEditDocument));
-                        b.SetDynamic(popup, DynamicProperty.Bool("open"), b.Const(true));
+                        b.SetProperty(popup, b.Const("open"), b.Const(true));
                         return b.Clone(model);
 
                     }));
@@ -758,7 +758,7 @@ public static partial class ServiceDoc
                         b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
 
                         var popup = b.GetElementById(b.Const(IdRemoveDocument));
-                        b.SetDynamic(popup, DynamicProperty.Bool("open"), b.Const(true));
+                        b.SetProperty(popup, b.Const("open"), b.Const(true));
                         return b.Clone(model);
 
                     }));

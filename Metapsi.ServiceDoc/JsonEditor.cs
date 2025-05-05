@@ -319,7 +319,7 @@ public static partial class JsonEditorExtensions
         Func<TSyntaxBuilder, Var<TResult>> ifBoolean,
         Func<TSyntaxBuilder, Var<TResult>> ifInt,
         Func<TSyntaxBuilder, Var<TResult>> ifNumber)
-        where TSyntaxBuilder : SyntaxBuilder, new()
+        where TSyntaxBuilder : SyntaxBuilder
     {
         return b.Switch(
             type,
