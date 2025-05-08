@@ -644,7 +644,7 @@ public static partial class ServiceDoc
                                 collectionProperty.Name,
                                 (b, entity) =>
                                 {
-                                    var collection = b.GetProperty<List<DynamicObject>>(entity, collectionProperty.Name);
+                                    var collection = b.GetProperty<List<object>>(entity, collectionProperty.Name);
                                     var length = b.Get(collection, x => x.Count());
                                     return b.Text(b.Concat(b.AsString(length), b.Const(" items")));
                                 });
@@ -794,7 +794,7 @@ public static partial class ServiceDoc
     {
         var rootNode = b.JsonEditorCreateNodeFromData(
             documentSchema,
-            edited.As<DynamicObject>(),
+            edited.As<object>(),
             b.Const("-"),
             b.Const("r"));
 

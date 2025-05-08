@@ -71,7 +71,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateObjectNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> objectType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -94,7 +94,7 @@ public static partial class JsonEditorExtensions
                     {
                         var propName = b.Get(prop, x => x.name);
                         var childId = b.Concat(nodeId, b.Const("/"), propName);
-                        var childData = b.GetProperty<DynamicObject>(data, propName);
+                        var childData = b.GetProperty<object>(data, propName);
                         b.Push(
                             b.Get(objectProperties, x => x.Properties),
                             b.Call(
@@ -118,7 +118,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateArrayNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> objectType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -137,7 +137,7 @@ public static partial class JsonEditorExtensions
                 var itemType = b.Get(objectType, x => x.items);
                 var currentIndex = b.Ref(b.Const(0));
                 b.Foreach(
-                    data.As<List<DynamicObject>>(),
+                    data.As<List<object>>(),
                     (b, item) =>
                     {
                         var childId = b.Concat(nodeId, b.Const("/"), b.AsString(b.GetRef(currentIndex)));
@@ -166,7 +166,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateStringNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> schemaType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -191,7 +191,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateBoolNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> schemaType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -215,7 +215,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateIntNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> schemaType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -239,7 +239,7 @@ public static partial class JsonEditorExtensions
 
     public static Var<JsonEditorDataNode> CreateNumberNode(
         this SyntaxBuilder b,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<SchemaType> schemaType,
         Var<string> nodeName,
         Var<string> nodeId)
@@ -261,12 +261,12 @@ public static partial class JsonEditorExtensions
             });
     }
 
-    public static Var<bool> IsUndefined(this SyntaxBuilder b, Var<DynamicObject> data)
+    public static Var<bool> IsUndefined(this SyntaxBuilder b, Var<object> data)
     {
-        return b.AreEqual(data, b.GetProperty<DynamicObject>(b.Self(), "undefined"));
+        return b.AreEqual(data, b.GetProperty<object>(b.Self(), "undefined"));
     }
 
-    public static Var<bool> IsNull(this SyntaxBuilder b, Var<DynamicObject> data)
+    public static Var<bool> IsNull(this SyntaxBuilder b, Var<object> data)
     {
         return b.If(
             b.IsUndefined(data),
@@ -277,7 +277,7 @@ public static partial class JsonEditorExtensions
     public static Var<JsonEditorDataNode> JsonEditorCreateNodeFromData(
         this SyntaxBuilder b,
         Var<SchemaType> schemaType,
-        Var<DynamicObject> data,
+        Var<object> data,
         Var<string> nodeName,
         Var<string> nodeId)
     {
@@ -301,12 +301,12 @@ public static partial class JsonEditorExtensions
         return b.JsonEditorSwitchType(
             b.Get(schemaType, x => x.type),
             defaultValue: b.Const(JsonEditorEmptyDataNode),
-            ifObject: b => b.Call(CreateObjectNode, b.NewObj<DynamicObject>(), schemaType, nodeName, nodeId),
-            ifArray: b => b.Call(CreateArrayNode, b.NewCollection<DynamicObject>().As<DynamicObject>(), schemaType, nodeName, nodeId),
-            ifString: b => b.Call(CreateStringNode, b.Const(string.Empty).As<DynamicObject>(), schemaType, nodeName, nodeId),
-            ifBoolean: b => b.Call(CreateBoolNode, b.Const(false).As<DynamicObject>(), schemaType, nodeName, nodeId),
-            ifInt: b => b.Call(CreateIntNode, b.Const(0).As<DynamicObject>(), schemaType, nodeName, nodeId),
-            ifNumber: b => b.Call(CreateNumberNode, b.Const(0).As<DynamicObject>(), schemaType, nodeName, nodeId));
+            ifObject: b => b.Call(CreateObjectNode, b.NewObj<object>(), schemaType, nodeName, nodeId),
+            ifArray: b => b.Call(CreateArrayNode, b.NewCollection<object>().As<object>(), schemaType, nodeName, nodeId),
+            ifString: b => b.Call(CreateStringNode, b.Const(string.Empty).As<object>(), schemaType, nodeName, nodeId),
+            ifBoolean: b => b.Call(CreateBoolNode, b.Const(false).As<object>(), schemaType, nodeName, nodeId),
+            ifInt: b => b.Call(CreateIntNode, b.Const(0).As<object>(), schemaType, nodeName, nodeId),
+            ifNumber: b => b.Call(CreateNumberNode, b.Const(0).As<object>(), schemaType, nodeName, nodeId));
     }
 
     public static Var<TResult> JsonEditorSwitchType<TSyntaxBuilder, TResult>(
