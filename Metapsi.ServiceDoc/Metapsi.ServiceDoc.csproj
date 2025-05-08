@@ -12,7 +12,6 @@
 		<PackageReference Include="Metapsi.Html" Version="$(MetapsiVersion)" />
 	</ItemGroup>
 
-
 	<ItemGroup>
 		<EmbeddedResource Include="embedded\Metapsi.ServiceDoc.css" LogicalName="Metapsi.ServiceDoc.css" />
 	</ItemGroup>

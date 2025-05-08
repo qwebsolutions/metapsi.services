@@ -50,7 +50,7 @@ public static partial class SignInService
         {
             var model = await options.LoadSignInPage(httpContext);
             model.SignInPath = options.SignInPath;
-            return Page.Model(model);
+            return Page.Result(model);
         }).AllowAnonymous();
 
         baseEndpoint.MapPost(options.SignInPath, async (CommandContext commandContext, HttpContext httpContext) =>
@@ -77,7 +77,7 @@ public static partial class SignInService
 
             // Sign in failed, render page again
             var model = await options.LoadSignInPage(httpContext);
-            return Page.Model(model);
+            return Page.Result(model);
 
         }).AllowAnonymous();
 
@@ -94,7 +94,7 @@ public static partial class SignInService
     public static void SignInUserPasswordPage(HtmlBuilder b, SignInUserPasswordModel model)
     {
         b.AddModuleStylesheet();
-        EmbeddedFiles.AddAll(typeof(SignInUserPasswordModel).Assembly);
+        EmbeddedFiles.AddAssembly(typeof(SignInUserPasswordModel).Assembly);
 
         b.Document.Body.SetAttribute("class", "w-screen h-screen");
         b.BodyAppend(

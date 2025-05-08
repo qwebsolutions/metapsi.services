@@ -214,7 +214,7 @@ namespace Metapsi
             DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
-            await EmbeddedFiles.AddAsync(typeof(Metapsi.ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
+            await EmbeddedFiles.AddAssembly(typeof(Metapsi.ServiceDoc).Assembly);
 
             var propsConfigurator = new DocsGroup()
             {
@@ -271,8 +271,7 @@ namespace Metapsi
         {
             uiEndpoint.UseRenderer<TModel>(model =>
             {
-                var document = HtmlBuilder.FromDefault(b => buildPage(b, model));
-                return document.ToHtml();
+                return HtmlBuilder.FromDefault(b => buildPage(b, model));
             });
         }
 
