@@ -1,7 +1,5 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +9,8 @@ using System.Threading.Tasks;
 
 namespace Metapsi;
 
-public static partial class ServiceDoc
-{
+//public static partial class ServiceDoc
+//{
     //public class NewDoc<T> : IData
     //{
     //    public T Doc { get; set; }
@@ -178,4 +176,4 @@ public static partial class ServiceDoc
 
     
     
-}
+//}

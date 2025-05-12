@@ -4,17 +4,25 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using Metapsi.Sqlite;
+using System.Data.Common;
 
 namespace Metapsi;
 
 public static partial class ServiceDoc
 {
+    public class TableMetadata
+    {
+        public string TableName { get; set; }
+        public IndexColumn IdColumn { get; set; }
+        public List<IndexColumn> IndexColumns { get; set; }
+    }
+
     private class PragmaXTableRow
     {
         public string name { get; set; }
     }
 
-    internal class IndexColumn
+    public class IndexColumn
     {
         public string SourceProperty { get; set; }
         public Type CSharpType { get; set; }
@@ -25,12 +33,14 @@ public static partial class ServiceDoc
         return t.CSharpTypeName(TypeQualifier.Root).Replace(".", "_").Replace("`", "_").Replace("<", "_").Replace(">", "_").Replace("+", "_");
     }
     
-    private static async Task CreateDocumentTableAsync<T>(
+    private static async Task CreateDocumentTableAsync(
         SqliteQueue sqliteQueue,
-        string tableName,
-        IndexColumn idColumn,
-        List<IndexColumn> indexColumns)
+        TableMetadata tableMetadata)
     {
+        string tableName = tableMetadata.TableName;
+        IndexColumn idColumn = tableMetadata.IdColumn;
+        List<IndexColumn> indexColumns = tableMetadata.IndexColumns;
+
         var tableColumnDeclarations = new List<string>();
         tableColumnDeclarations.Add($"ID {idColumn.CSharpType.GetSqliteTypeAffinity()} NOT NULL UNIQUE GENERATED ALWAYS AS (json_extract(json, '$.{idColumn.SourceProperty}')) VIRTUAL");
         foreach (var indexColumn in indexColumns)

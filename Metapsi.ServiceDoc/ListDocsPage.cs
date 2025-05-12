@@ -207,30 +207,33 @@ public static partial class ServiceDoc
                 },
                 b =>
                 {
-                    return b.HtmlDiv(
-                        b =>
-                        {
-                            b.SetSlot("footer");
-                            b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
-                        },
-                        b.JsonEditorSelectedNodeOptions(),
-                        b.SlButton(
+                    return b.Optional(
+                        b.HasObject(b.Get(model, x => x.EditDocument)),
+                        b => b.HtmlDiv(
                             b =>
                             {
-                                b.SetVariantPrimary();
-
-                                b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
-                                {
-                                    // Extracts the json from the editor
-                                    b.Set(
-                                        model, x => x.EditDocument,
-                                        b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
-                                    b.Log(b.Get(model, x => x.EditDocument));
-
-                                    return SaveDocument(b, model);
-                                }));
+                                b.SetSlot("footer");
+                                b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
+                                //b.SetProperty(b.Props, b.Const("key"), b.Call(getId, b.Get(model, x => x.EditDocument)));
                             },
-                    b.Text("Save")));
+                            b.JsonEditorSelectedNodeOptions(),
+                            b.SlButton(
+                                b =>
+                                {
+                                    b.SetVariantPrimary();
+
+                                    b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                                    {
+                                        // Extracts the json from the editor
+                                        b.Set(
+                                            model, x => x.EditDocument,
+                                            b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
+                                        b.Log(b.Get(model, x => x.EditDocument));
+
+                                        return SaveDocument(b, model);
+                                    }));
+                                },
+                        b.Text("Save"))));
                 }));
     }
 
@@ -309,9 +312,12 @@ public static partial class ServiceDoc
         var onResult = b.MakeAction(
             (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<T> result) =>
             {
+                b.Log("init result", result);
                 b.Set(model, x => x.EditDocument, result);
+                b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
                 var popup = b.GetElementById(b.Const(IdEditDocument));
                 b.SetProperty(popup, b.Const("open"), b.Const(true));
+                b.Log("model after init", model);
                 return b.Clone(model);
             });
 
@@ -728,6 +734,7 @@ public static partial class ServiceDoc
                             (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
                         b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
+                        b.Log("Document schema", b.Get(model, x => x.DocumentSchema));
                         b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
 
                         var popup = b.GetElementById(b.Const(IdEditDocument));

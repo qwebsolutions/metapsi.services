@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Linq;
 using System;
 using System.Threading.Tasks;
@@ -23,15 +22,15 @@ namespace Metapsi
             });
         }
 
-        public static void ConfigureGroupRoutes(this DocsGroup docsGroup, Action<RouteHandlerBuilder> builder)
-        {
-            docsGroup.GroupRoutesBuilder = builder;
-        }
+        //public static void ConfigureGroupRoutes(this DocsGroup docsGroup, Action<RouteHandlerBuilder> builder)
+        //{
+        //    docsGroup.GroupRoutesBuilder = builder;
+        //}
 
-        public static void ConfigureDocumentRoutes<T>(this IDocumentProps<T> b, Action<RouteHandlerBuilder> builder)
-        {
-            (b as DocumentProps<T>).DocumentRoutesBuilder = builder;
-        }
+        //public static void ConfigureDocumentRoutes<T>(this IDocumentProps<T> b, Action<RouteHandlerBuilder> builder)
+        //{
+        //    (b as DocumentProps<T>).DocumentRoutesBuilder = builder;
+        //}
 
         public static void SetFrontendDefaultColumns<T>(this IDocumentProps<T> b, params string[] columnNames)
         {

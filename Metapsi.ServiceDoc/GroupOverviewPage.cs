@@ -16,7 +16,7 @@ namespace Metapsi
         public string DocTypeName { get; set; } = string.Empty;
         public int Count { get; set; } = 0;
         public string DocumentTypeUrl { get; set; } = string.Empty;
-        public string ApiUrl { get; set; } = string.Empty;
+        //public string ApiUrl { get; set; } = string.Empty;
     }
 
     public static partial class ServiceDoc
@@ -54,13 +54,7 @@ namespace Metapsi
                                         {
                                             b.SetClass("text-gray-600");
                                         },
-                                        b.Text(b.AsString(b.Get(service, x => x.Count)))),
-                                    b.HtmlDiv(
-                                        b =>
-                                        {
-                                            b.SetClass("text-xs");
-                                        },
-                                        b.Text(b.Get(service, x => x.ApiUrl)))));
+                                        b.Text(b.AsString(b.Get(service, x => x.Count))))));
                         }));
                 }));
         }
