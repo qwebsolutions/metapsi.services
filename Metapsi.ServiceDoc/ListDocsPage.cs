@@ -734,7 +734,6 @@ public static partial class ServiceDoc
                             (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
                         b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
-                        b.Log("Document schema", b.Get(model, x => x.DocumentSchema));
                         b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
 
                         var popup = b.GetElementById(b.Const(IdEditDocument));
@@ -763,6 +762,7 @@ public static partial class ServiceDoc
                             (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
                         b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
+                        b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
 
                         var popup = b.GetElementById(b.Const(IdRemoveDocument));
                         b.SetProperty(popup, b.Const("open"), b.Const(true));

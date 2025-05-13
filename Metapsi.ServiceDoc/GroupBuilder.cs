@@ -1,19 +1,12 @@
-﻿using Dapper;
-using Metapsi.Html;
-using Metapsi.Sqlite;
+﻿using Metapsi.Html;
+using Metapsi.Web;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
-using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
-using System.Xml.Linq;
 
 namespace Metapsi
 {
@@ -24,129 +17,19 @@ namespace Metapsi
 
         }
 
-        //public static async Task<HtmlDocument> RenderOverview(
-        //    this IDocsApp docsApp,
-        //    Func<string, string> findApi)
-        //{
-        //    var internalDocsApp = docsApp as DocsApp;
-        //    return await internalDocsApp.RenderOverview(findApi);
-        //}
+        private static HtmlDocument ErrorPage(string error)
+        {
+            return HtmlBuilder.FromDefault(
+                b =>
+                {
+                    b.BodyAppend(b.Text(error));
+                });
+        }
 
-        //public static async Task<HtmlDocument> RenderList(this IDocsApp docsApp, string documentType, Func<string, string> findApi)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            var render = handler.RenderDocumentsList;
-        //            if (render != null)
-        //            {
-        //                return await render(findApi);
-        //            }
-        //        }
-        //    }
-
-        //    return HtmlBuilder.FromDefault(
-        //        b =>
-        //        {
-        //            return b.HtmlDiv(
-        //                b =>
-        //                {
-
-        //                },
-        //                b.Text($"Type {documentType} not available"));
-        //        });
-        //}
-
-        //public static async Task WriteOverviewHtmlResponse(
-        //    this IDocsApp docsApp,
-        //    Func<Stream, string, Task> writeResponse,
-        //    Func<string, string> findApi)
-        //{
-        //    var internalDocsApp = docsApp as DocsApp;
-        //    var overviewHtmlDocument = await internalDocsApp.RenderOverview(findApi);
-
-        //    await writeResponse(
-        //        new MemoryStream(Encoding.UTF8.GetBytes(overviewHtmlDocument.ToHtml())),
-        //        "text/html");
-        //}
-
-        //public static async Task WriteListDocumentsHtmlResponse(
-        //    this IDocsApp docsApp,
-        //    string documentType,
-        //    Func<Stream, string, Task> writeResponse,
-        //    Func<string, string> findApi)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            var render = handler.WriteListDocumentsHtmlResponse(writeResponse);
-        //        }
-        //    }
-
-        //    var internalDocsApp = docsApp as DocsApp;
-        //    var overviewHtmlDocument = await internalDocsApp.RenderOverview(findApi);
-
-        //    await writeResponse(
-        //        new MemoryStream(Encoding.UTF8.GetBytes(overviewHtmlDocument.ToHtml())),
-        //        "text/html");
-        //}
-
-        //public static async Task WriteInitDocumentApiResponse(this IDocsApp docsApp, string documentType, Func<Stream, string, Task> writeResponse)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            await handler.WriteInitApiResponse(writeResponse);
-        //        }
-        //    }
-        //}
-
-        //public static async Task WriteListDocumentsApiResponse(this IDocsApp docsApp, string documentType, Func<Stream, string, Task> writeResponse)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            await handler.WriteListDocumentsApiResponse(writeResponse);
-        //        }
-        //    }
-        //}
-
-        //public static async Task WriteSaveDocumentApiResponse(this IDocsApp docsApp, string documentType, Func<Stream, string, Task> writeResponse)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            await handler.WriteSaveDocumentApiResponse(writeResponse);
-        //        }
-        //    }
-        //}
-
-        //public static async Task WriteDeleteDocumentApiResponse(this IDocsApp docsApp, string documentType, Func<Stream, string, Task> writeResponse)
-        //{
-        //    var app = docsApp as DocsApp;
-        //    if (app != null)
-        //    {
-        //        if (app.docHandlers.TryGetValue(documentType, out var handler))
-        //        {
-        //            await handler.WriteSaveDocumentApiResponse(writeResponse);
-        //        }
-        //    }
-        //}
-
-        internal class DocsApp : IDocsApp
+        public class DocsApp : IDocsApp
         {
             internal Dictionary<string, DocHandler> docHandlers { get; set; } = new Dictionary<string, DocHandler>();
-            internal Func<Func<Stream,string,Task>, Func<string,string>, Task> WriteOverviewHtmlResponse { get; set; }
+            //internal Func<Func<string, string>, Task<HtmlDocument>> GetRootPage { get; set; }
             internal string EndpointName { get; set; } = Guid.NewGuid().ToString();
             internal DocsGroup DocsGroup { get; set; }
 
@@ -154,18 +37,75 @@ namespace Metapsi
             {
                 this.DocsGroup = new DocsGroup(this);
             }
+
+            public async Task<HtmlDocument> GetRootPage(Func<RouteDescription, string> findUrl)
+            {
+                var docsOverviewModel = new DocsOverviewModel();
+                foreach (var docTypeHandler in docHandlers)
+                {
+                    docsOverviewModel.DocTypes.Add(await docTypeHandler.Value.GetDocTypeSummary(findUrl));
+                }
+
+                var overviewHtmlDocument = HtmlBuilder.FromDefault(b =>
+                {
+                    ServiceDoc.Render(b, docsOverviewModel);
+                });
+
+                return overviewHtmlDocument;
+            }
+
+            public async Task<HtmlDocument> GetListDocumentsPage(string docType, Func<RouteDescription, string> findUrl)
+            {
+                if (docHandlers.TryGetValue(docType, out var handler))
+                {
+                    var listDocumentsPage = await handler.GetListDocumentsPage(findUrl);
+                    return listDocumentsPage;
+                }
+                return ErrorPage($"Type {docType} is not valid");
+            }
+
+            public async Task WriteInitApiResponse(string docType, Metapsi.Web.HttpResponse httpResponse)
+            {
+                if (docHandlers.TryGetValue(docType, out var handler))
+                {
+                    await handler.WriteInitApiResponse(httpResponse);
+                }
+            }
+
+            public async Task WriteListDocumentsApiResponse(string docType, Metapsi.Web.HttpResponse httpResponse)
+            {
+                if (docHandlers.TryGetValue(docType, out var handler))
+                {
+                    await handler.WriteListDocumentsApiResponse(httpResponse);
+                }
+            }
+
+            public async Task HandleSaveDocumentApi(string docType, HttpContext httpContext)
+            {
+                if (docHandlers.TryGetValue(docType, out var handler))
+                {
+                    await handler.HandleSaveDocumentApi(httpContext);
+                }
+            }
+
+            public async Task HandleDeleteDocumentApi(string docType, HttpContext httpContext)
+            {
+                if (docHandlers.TryGetValue(docType, out var handler))
+                {
+                    await handler.HandleDeleteDocumentApi(httpContext);
+                }
+            }
         }
 
         internal class DocHandler
         {
             internal Func<Task> Migrate { get; set; }
-            internal Func<Func<string, string>, Task<DocTypeOverview>> GetOverview { get; set; }
-            internal Func<Stream, Task<object>> ReadBody { get; set; }
-            internal Func<Func<Stream, string, Task>, Func<string, string>, Task> WriteListDocumentsHtmlResponse { get; set; }
-            internal Func<Func<Stream, string, Task>, Task> WriteInitApiResponse { get; set; }
-            internal Func<Func<Stream, string, Task>, Task> WriteListDocumentsApiResponse { get; set; }
-            internal Func<Stream, Func<Stream, string, Task>, Task> WriteSaveDocumentApiResponse { get; set; }
-            internal Func<Stream, Func<Stream, string, Task>, Task> WriteDeleteDocumentApiResponse { get; set; }
+            internal Func<Func<RouteDescription, string>, Task<DocTypeOverview>> GetDocTypeSummary { get; set; }
+            internal Func<Func<RouteDescription, string>, Task<HtmlDocument>> GetListDocumentsPage { get; set; }
+            internal Func<Metapsi.Web.HttpResponse, Task> WriteInitApiResponse { get; set; }
+            internal Func<Metapsi.Web.HttpResponse, Task> WriteListDocumentsApiResponse { get; set; }
+            internal Func<HttpContext, Task> HandleSaveDocumentApi { get; set; }
+            internal Func<HttpContext, Task> HandleDeleteDocumentApi { get; set; }
         }
 
         /// <summary>
@@ -209,12 +149,6 @@ namespace Metapsi
             internal DocumentProps(Expression<Func<T, TId>> getId)
             {
                 this.getId = getId;
-                //this.Migrate = initializer.DefaultMigrate<T>();
-                //this.Count = initializer.DefaultCount<T>();
-                //this.Create = initializer.DefaultCreate<T>();
-                //this.List = initializer.DefaultList<T>();
-                //this.Save = initializer.DefaultSave<T>();
-                //this.Delete = initializer.DefaultDelete<T>();
             }
 
             internal System.Linq.Expressions.Expression<Func<T,TId>> getId { get; set; }
@@ -253,16 +187,6 @@ namespace Metapsi
             }
         }
 
-        //internal class DocumentProps<T, TId> : DocumentProps<T>
-        //{
-        //    public DocumentProps(Expression<Func<T, TId>> idProperty) : base(idProperty.PropertyName())
-        //    {
-        //        this.IdProperty = idProperty;
-        //    }
-
-        //    public System.Linq.Expressions.Expression<Func<T, TId>> IdProperty { get; set; }
-        //}
-
         public static void AddDoc<T, TId>(
             this DocsGroup docsGroup,
             Expression<Func<T, TId>> idProperty,
@@ -295,31 +219,32 @@ namespace Metapsi
                 setProps(docProps);
             }
 
-            var docTypePath = DocumentTypeIdentifier<T>();
+            var docType = DocumentTypeIdentifier<T>();
 
             docProps.FillDefaults(docsGroup.defaultInitializer);
             docsGroup.docsApp.docHandlers.Add(
-                docTypePath,
+                docType,
                 new DocHandler()
                 {
                     Migrate = docProps.Migrate,
-                    ReadBody = async (Stream httpBody) =>
-                    {
-                        return await System.Text.Json.JsonSerializer.DeserializeAsync<T>(httpBody);
-                    },
-                    GetOverview = async (findApi) =>
+                    GetDocTypeSummary = async (findApi) =>
                     {
                         var count = await docProps.Count();
                         var overview = new DocTypeOverview()
                         {
                             DocTypeName = typeof(T).Name,
                             Count = count,
-                            DocumentTypeUrl = findApi(DocumentTypeIdentifier<T>())
+                            DocumentTypeUrl = findApi(RouteDescription.New(
+                                "list-documents-page",
+                                b =>
+                                {
+                                    b.Add("docType", DocumentTypeIdentifier<T>());
+                                }))
                         };
 
                         return overview;
                     },
-                    WriteListDocumentsHtmlResponse = async (writeHtmlResponse, findApi) =>
+                    GetListDocumentsPage = async (findApi) =>
                     {
                         var list = await docProps.List();
 
@@ -345,10 +270,10 @@ namespace Metapsi
                         var model = new ListDocsPage<T>()
                         {
                             DocumentSchema = JsonSchemaExtensions.GetJsonSchemaType(typeof(T)),
-                            InitApiUrl = findApi($"init/{docTypePath}"),
-                            ListApiUrl = findApi($"list/{docTypePath}"),
-                            SaveApiUrl = findApi($"save/{docTypePath}"),
-                            DeleteApiUrl = findApi($"delete/{docTypePath}"),
+                            InitApiUrl = findApi(RouteDescription.New("init-api").Add("docType", docType)),
+                            ListApiUrl = findApi(RouteDescription.New("list-api").Add("docType",docType)),
+                            SaveApiUrl = findApi(RouteDescription.New("save-api").Add("docType", docType)),
+                            DeleteApiUrl = findApi(RouteDescription.New("delete-api").Add("docType", docType)),
                             Documents = list,
                             SummaryHtml = summaryHtml,
                             Columns = docProps.FrontendDefaultColumns
@@ -359,47 +284,29 @@ namespace Metapsi
                                 Render(b, model, idProperty);
                             });
 
-                        await Metapsi.MetadataExtensions.LoadMetadataResources(htmlDocument.Metadata);
-
-                        await writeHtmlResponse(
-                            new MemoryStream(
-                                System.Text.Encoding.UTF8.GetBytes(htmlDocument.ToHtml())),
-                            "text/html");
+                        return htmlDocument;
                     },
-                    WriteInitApiResponse = async (writeJsonResponse) =>
+                    WriteInitApiResponse = async (httpResponse) =>
                     {
                         var newObject = await docProps.Create();
-                        await writeJsonResponse(
-                            new MemoryStream(
-                                System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(newObject))),
-                            "application/json");
+                        await httpResponse.WriteJsonReponse(newObject);
                     },
-                    WriteListDocumentsApiResponse = async (writeJsonResponse) =>
+                    WriteListDocumentsApiResponse = async (httpResponse) =>
                     {
                         var newList = await docProps.List();
-
-                        await writeJsonResponse(
-                            new MemoryStream(
-                                System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(newList))),
-                            "application/json");
+                        await httpResponse.WriteJsonReponse(newList);
                     },
-                    WriteSaveDocumentApiResponse = async (httpBody, writeJsonResponse) =>
+                    HandleSaveDocumentApi = async (httpContext) =>
                     {
-                        var document = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(httpBody);
+                        var document = await httpContext.Request.ReadJsonBody<T>();
                         var saveResponse = await docProps.Save(document);
-                        await writeJsonResponse(
-                            new MemoryStream(
-                                System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(saveResponse))),
-                            "application/json");
+                        await httpContext.Response.WriteJsonReponse(saveResponse);
                     },
-                    WriteDeleteDocumentApiResponse = async (httpBody, writeJsonResponse) =>
+                    HandleDeleteDocumentApi = async (httpContext) =>
                     {
-                        var document = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(httpBody);
+                        var document = await httpContext.Request.ReadJsonBody<T>();
                         var deleteResponse = await docProps.Delete(document);
-                        await writeJsonResponse(
-                            new MemoryStream(
-                                System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(deleteResponse))),
-                            "application/json");
+                        await httpContext.Response.WriteJsonReponse(deleteResponse);
                     },
                 });
 
@@ -557,7 +464,7 @@ namespace Metapsi
         //    docsGroup.SetJournalWal = false;
         //}
 
-        internal static async Task<DocsApp> CreateDocsApp(
+        public static async Task<DocsApp> CreateDocsApp(
             Action<DocsGroup> configure)
         {
             DocsApp docsApp = new DocsApp();
@@ -569,37 +476,21 @@ namespace Metapsi
 
             await EmbeddedFiles.AddAssembly(typeof(Metapsi.ServiceDoc).Assembly);
 
-            docsApp.WriteOverviewHtmlResponse = async (writeResponse, findApi) =>
-            {
-                var docsOverviewModel = new DocsOverviewModel();
-                foreach (var docTypeHandler in docsApp.docHandlers)
-                {
-                    docsOverviewModel.DocTypes.Add(await docTypeHandler.Value.GetOverview(findApi));
-                }
-
-                var overviewHtmlDocument = HtmlBuilder.FromDefault(b =>
-                {
-                    ServiceDoc.Render(b, docsOverviewModel);
-                });
-
-                await Metapsi.MetadataExtensions.LoadMetadataResources(overviewHtmlDocument.Metadata);
-
-                await writeResponse(
-                    new MemoryStream(
-                        System.Text.Encoding.UTF8.GetBytes(overviewHtmlDocument.ToHtml())),
-                        "text/html");
-            };
-
-            //var docsRoute = groupEndpoint.MapGet(docsGroup.overviewUrl, async (HttpContext httpContext) =>
+            //docsApp.GetRootPage = async (findApi) =>
             //{
             //    var docsOverviewModel = new DocsOverviewModel();
-            //    foreach (var getOverview in docsGroup.getOverview)
+            //    foreach (var docTypeHandler in docsApp.docHandlers)
             //    {
-            //        docsOverviewModel.DocTypes.Add(await getOverview(httpContext));
+            //        docsOverviewModel.DocTypes.Add(await docTypeHandler.Value.GetDocTypeSummary(findApi));
             //    }
 
-            //    return Page.Result(docsOverviewModel);
-            //});
+            //    var overviewHtmlDocument = HtmlBuilder.FromDefault(b =>
+            //    {
+            //        ServiceDoc.Render(b, docsOverviewModel);
+            //    });
+
+            //    return overviewHtmlDocument;
+            //};
 
             return docsApp;
         }

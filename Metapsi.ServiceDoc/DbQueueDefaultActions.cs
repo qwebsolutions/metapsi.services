@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace Metapsi
 {
+
     public static partial class ServiceDoc
     {
         internal class DbQueueDefaultActions : IDbDefaultActions
@@ -15,15 +16,6 @@ namespace Metapsi
             {
                 this.dbQueue = dbQueue;
             }
-
-            Func<TableMetadata, Task> defaultMigrate { get; set; }
-            Func<Type, Task<int>> defaultCount { get; set; }
-            Action<Type> fillList { get; set; }
-
-            //public void SetDefaultMigrate(Func<TableMetadata, Task> defaultMigrate)
-            //{
-            //    this.defaultMigrate = defaultMigrate;
-            //}
 
             public System.Func<Task> GetDefaultMigrate(TableMetadata tableMetadata)
             {
@@ -76,6 +68,11 @@ namespace Metapsi
                     };
                 };
             }
+        }
+
+        public static void UseSqliteQueue(this DocsGroup docsGroup, DbQueue dbQueue)
+        {
+            docsGroup.defaultInitializer = new DbQueueDefaultActions(dbQueue);
         }
     }
 }

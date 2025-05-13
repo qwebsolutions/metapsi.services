@@ -1,12 +1,12 @@
-﻿using Dapper;
-using Metapsi.Sqlite;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
+using Metapsi.Html;
+using Metapsi.Shoelace;
+using Metapsi.Syntax;
 
 namespace Metapsi
 {
@@ -18,6 +18,9 @@ namespace Metapsi
             Action<DocsGroup> setProps)
         {
             await EmbeddedFiles.AddAssembly(typeof(Metapsi.ServiceDoc).Assembly);
+            await EmbeddedFiles.Load.HtmlEmbeddedFiles();
+            await EmbeddedFiles.Load.ShoelaceEmbeddedFiles();
+            await EmbeddedFiles.Load.SyntaxCoreEmbeddedFiles();
 
             var docsApp = await CreateDocsApp(dc =>
             {
@@ -25,100 +28,61 @@ namespace Metapsi
                 setProps(dc);
             });
 
-            var buildAbsolutePath = (HttpContext httpContext, string relativePath) =>
+            var getPathLocator = (HttpContext httpContext) =>
             {
-                var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
-                var rootPath = linkGenerator.GetPathByName(docsApp.EndpointName);
-                var absolutePath = rootPath.TrimEnd('/') + "/" + relativePath.TrimStart('/');
-                return absolutePath;
+                return (RouteDescription routeDescription) =>
+                {
+                    var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
+                    var rootPath = linkGenerator.GetPathByName(docsApp.EndpointName);
+                    var relativePath = string.Empty;
+
+                    switch (routeDescription.Name)
+                    {
+                        case "list-documents-page":
+                            relativePath = routeDescription.Get("docType");
+                            break;
+                        default:
+                            relativePath = routeDescription.Name.Replace("-api", string.Empty) + "/" + routeDescription.Get("docType");
+                            break;
+                    }
+
+                    return rootPath.TrimEnd('/') + "/" + relativePath.TrimStart('/');
+                };
             };
 
             var docsRoute = groupEndpoint.MapGet("/", async (HttpContext httpContext) =>
             {
-                var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
-                await docsApp.WriteOverviewHtmlResponse(
-                    async (content, contentType) =>
-                    {
-                        httpContext.Response.ContentType = contentType;
-                        await content.CopyToAsync(httpContext.Response.Body);
-                    },
-                    relativePath => buildAbsolutePath(httpContext, relativePath));
+                var rootHtml = await docsApp.GetRootPage(getPathLocator(httpContext));
+                await httpContext.WriteHtmlDocumentResponse(rootHtml);
             }).WithName(docsApp.EndpointName);
 
             var docTypeRoute = groupEndpoint.MapGet("{docType}", async (HttpContext httpContext, string docType) =>
             {
-                if (docsApp.docHandlers.TryGetValue(docType, out var handler))
-                {
-                    var linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();
-                    await handler.WriteListDocumentsHtmlResponse(
-                        async (content, contentType) =>
-                        {
-                            httpContext.Response.ContentType = contentType;
-                            await content.CopyToAsync(httpContext.Response.Body);
-                        },
-                        relativePath => buildAbsolutePath(httpContext, relativePath));
-                }
+                var listDocumentsPage = await docsApp.GetListDocumentsPage(docType, getPathLocator(httpContext));
+                await httpContext.WriteHtmlDocumentResponse(listDocumentsPage);
             });
+
             groupEndpoint.MapGet("init/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                if (docsApp.docHandlers.TryGetValue(docType, out var handler))
-                {
-                    await handler.WriteInitApiResponse(
-                        async (content, contentType) =>
-                        {
-                            httpContext.Response.ContentType = contentType;
-                            await content.CopyToAsync(httpContext.Response.Body);
-                        });
-                }
+                await docsApp.WriteInitApiResponse(docType, new Web.HttpResponse(httpContext.Response));
             });
 
             groupEndpoint.MapGet("list/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                if (docsApp.docHandlers.TryGetValue(docType, out var handler))
-                {
-                    await handler.WriteListDocumentsApiResponse(
-                        async (content, contentType) =>
-                        {
-                            httpContext.Response.ContentType = contentType;
-                            await content.CopyToAsync(httpContext.Response.Body);
-                        });
-                }
+                await docsApp.WriteListDocumentsApiResponse(docType, new Web.HttpResponse(httpContext.Response));
             });
 
             groupEndpoint.MapPost("save/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                if (docsApp.docHandlers.TryGetValue(docType, out var handler))
-                {
-                    await handler.WriteSaveDocumentApiResponse(
-                        httpContext.Request.Body,
-                        async (content, contentType) =>
-                        {
-                            httpContext.Response.ContentType = contentType;
-                            await content.CopyToAsync(httpContext.Response.Body);
-                        });
-                }
+                await docsApp.HandleSaveDocumentApi(docType, new Web.HttpContext(httpContext));
             });
 
             groupEndpoint.MapPost("delete/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                if (docsApp.docHandlers.TryGetValue(docType, out var handler))
-                {
-                    await handler.WriteDeleteDocumentApiResponse(
-                        httpContext.Request.Body,
-                        async (content, contentType) =>
-                        {
-                            httpContext.Response.ContentType = contentType;
-                            await content.CopyToAsync(httpContext.Response.Body);
-                        });
-                }
+                await docsApp.HandleDeleteDocumentApi(docType, new Web.HttpContext(httpContext));
             });
 
             return docsRoute;
-        }
-
-        public static void UseSqliteQueue(this DocsGroup docsGroup, DbQueue dbQueue)
-        {
-            docsGroup.defaultInitializer = new DbQueueDefaultActions(dbQueue);
         }
     }
 }
