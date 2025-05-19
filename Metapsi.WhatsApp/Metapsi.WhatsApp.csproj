@@ -1,12 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFrameworks>net47;net8.0</TargetFrameworks>
+		<LangVersion>11.0</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Metapsi.Mds" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.Web" Version="$(MetapsiVersion)" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+		<Compile Remove="netframework\*.cs" />
+		<None Include="netframework\*.cs" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net47'">
+		<Compile Remove="net\*.cs" />
+		<None Include="net\*.cs" />
 	</ItemGroup>
 
 </Project>

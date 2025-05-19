@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -174,11 +172,13 @@ public static class WhatsAppCloudApiExtensions
             $"https://graph.facebook.com/{apiClient.ApiVersion}/{businessNumberId}/messages");
         request.Headers.Add("Authorization", "Bearer " + apiClient.BearerToken);
 
-        request.Content = JsonContent.Create(message, options: new JsonSerializerOptions()
+        string jsonString = JsonSerializer.Serialize(message, options: new JsonSerializerOptions()
         {
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
 
+        // Create StringContent with UTF8 encoding and application/json media type
+        request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
         var postResult = await apiClient.HttpClient.SendAsync(request);
 
         var resultBody = await postResult.Content.ReadAsStringAsync();

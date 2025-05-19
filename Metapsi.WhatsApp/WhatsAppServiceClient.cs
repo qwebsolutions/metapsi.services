@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Metapsi.WhatsApp;
@@ -34,7 +35,7 @@ public static class WhatsAppClientExtensions
 {
     public static async Task<PostMessageResponse> PostMessage(this WhatsAppServiceClient client, MessageObject message)
     {
-        var postTextUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppServiceExtensions.PostMessagePath}";
+        var postTextUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppService.PostMessagePath}";
         var response = await client.HttpClient.PostAsJsonAsync(postTextUrl, message);
         response.EnsureSuccessStatusCode();
         var stringContent = await response.Content.ReadAsStringAsync();
@@ -49,7 +50,7 @@ public static class WhatsAppClientExtensions
 
     public static async Task<UploadMediaResponse> UploadMedia(this WhatsAppServiceClient client, byte[] content, string contentType, string filePath)
     {
-        var postTextUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppServiceExtensions.UploadMediaPath}";
+        var postTextUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppService.UploadMediaPath}";
         var response = await client.HttpClient.PostAsJsonAsync(postTextUrl, new UploadMediaRequest()
         {
             Content = content,
@@ -65,7 +66,7 @@ public static class WhatsAppClientExtensions
 
     public static async Task<GetMediaResponse> GetMedia(this WhatsAppServiceClient client, string mediaId)
     {
-        var getMediaUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppServiceExtensions.GetMediaPath}/" + mediaId;
+        var getMediaUrl = client.BaseUrl.TrimEnd('/') + $"/{WhatsAppService.GetMediaPath}/" + mediaId;
         var response = await client.HttpClient.GetAsync(getMediaUrl);
         response.EnsureSuccessStatusCode();
         using MemoryStream memoryStream = new MemoryStream();
@@ -77,5 +78,21 @@ public static class WhatsAppClientExtensions
             Content = content,
             ContentType = response.Content.Headers.ContentType.MediaType
         };
+    }
+
+    private static Task<HttpResponseMessage> PostAsJsonAsync<T>(
+        this HttpClient client,
+        string requestUri,
+        T value,
+        CancellationToken cancellationToken = default)
+    {
+        // Serialize the object to JSON
+        string json = System.Text.Json.JsonSerializer.Serialize(value);
+
+        // Create StringContent with JSON and correct media type
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        // Send POST request with the JSON content
+        return client.PostAsync(requestUri, content, cancellationToken);
     }
 }
