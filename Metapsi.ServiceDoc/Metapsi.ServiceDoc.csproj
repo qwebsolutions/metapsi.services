@@ -6,11 +6,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Metapsi.Html" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.Heroicons" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.Shoelace" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.SQLite" Version="$(MetapsiVersion)" />
 		<PackageReference Include="Metapsi.Web" Version="$(MetapsiVersion)" />
-		<PackageReference Include="Metapsi.Html" Version="$(MetapsiVersion)" />
 	</ItemGroup>
 
 	<ItemGroup>

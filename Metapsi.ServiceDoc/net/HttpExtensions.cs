@@ -28,6 +28,11 @@ namespace Metapsi
                 setProps(dc);
             });
 
+            return groupEndpoint.MapDocsApp(docsApp);
+        }
+
+        public static IEndpointConventionBuilder MapDocsApp(this IEndpointRouteBuilder groupEndpoint, DocsApp docsApp)
+        {
             var getPathLocator = (HttpContext httpContext) =>
             {
                 return (RouteDescription routeDescription) =>
