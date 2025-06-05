@@ -351,9 +351,9 @@ public static partial class JsonEditorExtensions
         return b.SlTree(
             b =>
             {
-                b.OnSlSelectionChange(b.MakeAction((SyntaxBuilder b, Var<object> model, Var<SlSelectionChangeEventArgs> args) =>
+                b.OnSlSelectionChange(b.MakeAction((SyntaxBuilder b, Var<object> model, Var<CustomEvent<SlSelectionChangeDetail>> args) =>
                 {
-                    var firstItem = b.Get(args, x => x.selection.First());
+                    var firstItem = b.Get(args, x => x.detail.selection.First());
                     var selectedId = b.GetProperty<string>(firstItem, "id");
 
                     var selectedNode = b.SearchRecursive(
