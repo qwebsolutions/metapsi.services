@@ -13,7 +13,7 @@ namespace Metapsi
     public static partial class ServiceDoc
     {
         public static async Task<IEndpointConventionBuilder> UseDocs(
-            this RouteGroupBuilder groupEndpoint,
+            this IEndpointRouteBuilder groupEndpoint,
             DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
