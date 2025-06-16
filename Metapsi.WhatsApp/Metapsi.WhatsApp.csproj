@@ -17,6 +17,7 @@
 	<ItemGroup Condition="'$(TargetFramework)' == 'net47'">
 		<Compile Remove="net\*.cs" />
 		<None Include="net\*.cs" />
+		<Reference Include="System.Net.Http" />
 	</ItemGroup>
 
 </Project>
