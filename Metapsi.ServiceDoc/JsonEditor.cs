@@ -716,9 +716,7 @@ public static partial class JsonEditorExtensions
                     b =>
                     {
                         b.SetPlaceholder("value");
-                        b.BindToRef(
-                            b.Get(node, x => x.StringProperties),
-                            x => x.Value);
+                        b.BindTo(b.Get(node, x => x.StringProperties), x => x.Value);
                     })));
     }
 
@@ -1498,24 +1496,5 @@ public static partial class JsonEditorExtensions
             ifBoolean: b => b.Get(node, x => x.BoolProperties.IsPresent),
             ifInt: b => b.Get(node, x => x.IntProperties.IsPresent),
             ifNumber: b => b.Get(node, x => x.NumberProperties.IsPresent));
-    }
-
-    public static void BindToRef<TControl, TEntity>(
-        this PropsBuilder<TControl> b,
-        Var<TEntity> entity,
-        System.Linq.Expressions.Expression<System.Func<TEntity, string>> onProperty)
-        where TControl : IAllowsBinding<TControl>, new()
-    {
-        Var<string> value = b.Get(entity, onProperty);
-
-        var setProperty = b.MakeAction<object, string>((SyntaxBuilder b, Var<object> state, Var<string> inputValue) =>
-        {
-            b.Set(entity, onProperty, inputValue);
-            return b.Clone(state);
-        });
-
-        var binder = new TControl().GetControlBinder();
-        binder.SetControlValue(b, value);
-        b.OnEventAction(binder.NewValueEventName, setProperty, b.Def(binder.GetEventValue));
     }
 }

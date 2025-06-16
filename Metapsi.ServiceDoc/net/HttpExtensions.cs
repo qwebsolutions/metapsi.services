@@ -69,22 +69,22 @@ namespace Metapsi
 
             groupEndpoint.MapGet("init/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                await docsApp.WriteInitApiResponse(docType, new Web.HttpResponse(httpContext.Response));
+                await docsApp.WriteInitApiResponse(docType, new Web.CfHttpResponse(httpContext.Response));
             });
 
             groupEndpoint.MapGet("list/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                await docsApp.WriteListDocumentsApiResponse(docType, new Web.HttpResponse(httpContext.Response));
+                await docsApp.WriteListDocumentsApiResponse(docType, new Web.CfHttpResponse(httpContext.Response));
             });
 
             groupEndpoint.MapPost("save/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                await docsApp.HandleSaveDocumentApi(docType, new Web.HttpContext(httpContext));
+                await docsApp.HandleSaveDocumentApi(docType, new Web.CfHttpContext(httpContext));
             });
 
             groupEndpoint.MapPost("delete/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                await docsApp.HandleDeleteDocumentApi(docType, new Web.HttpContext(httpContext));
+                await docsApp.HandleDeleteDocumentApi(docType, new Web.CfHttpContext(httpContext));
             });
 
             return docsRoute;

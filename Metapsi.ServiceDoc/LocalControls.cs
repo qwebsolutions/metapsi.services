@@ -64,7 +64,7 @@ namespace Metapsi
                         b =>
                         {
                             // ignore model, use reference
-                            b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), BoolPropertyExpression<TEntity>(property.Name), Converter.BoolConverter);
+                            b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), BoolPropertyExpression<TEntity>(property.Name));
                         },
                         b.Text(b.FormatLabel(b.Const(property.Name))));
                     b.Push(editControls, checkbox);
@@ -78,8 +78,7 @@ namespace Metapsi
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
                             b.BindTo(
                                 model,
-                                b.Def((SyntaxBuilder b, Var<TModel> model) => entity), IntPropertyExpression<TEntity>(property.Name),
-                                Converter.IntConverter);
+                                b.Def((SyntaxBuilder b, Var<TModel> model) => entity), IntPropertyExpression<TEntity>(property.Name));
                         });
                     b.Push(editControls, input);
                 }
@@ -116,7 +115,7 @@ namespace Metapsi
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
                             b.OnSlChange((SyntaxBuilder b, Var<TModel> model, Var<Event> domEvent) =>
                             {
-                                var selectedValue = b.NavigateProperties<Event, string>(domEvent, "target", "value");
+                                var selectedValue = b.GetTargetValue(domEvent);
                                 b.SetProperty(entity, b.Const(property.Name), b.ParseInt(selectedValue));
                                 return b.Clone(model);
                             });

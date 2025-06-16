@@ -7,6 +7,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Dapper;
 using System.Data.SQLite;
+using Metapsi.Html;
+using System.Collections.Generic;
 
 public static class Program
 {
@@ -43,8 +45,134 @@ public static class Program
         await RunServiceDocTest();
     }
 
+    public class User
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class Model
+    {
+        public List<User> Users { get; set; } = new();
+    }
+
+
+    public static async Task ServiceDocNotWorkingTest()
+    {
+        var webApp = WebApplication.CreateBuilder().AddMetapsi().Build().UseMetapsi();
+        webApp.Urls.Add("http://localhost:5000");
+
+        string dbPath =
+    System.IO.Path.Combine(
+        RelativePath.SearchUpfolder(RelativePath.From.EntryPath, System.IO.Path.Combine("Metapsi.Tests")),
+        "TestData", "test.db");
+
+        // Create db access queue
+        var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(dbPath));
+        await webApp.MapGroup("docs").UseDocs(
+            dbQueue,
+            b =>
+            {
+                // Register documents with their unique key property
+                b.AddDoc<User>(x => x.Id);
+                b.AddDoc<TestEntity>(x => x.Id);
+            });
+
+        webApp.MapGet("/", async () => Page.Result(
+            new Model()
+            {
+                // Load all documents
+                Users = await dbQueue.ListDocuments<User>()
+            }));
+
+        // Create sample user
+        await dbQueue.SaveDocument(new User()
+        {
+            Name = "John Doe",
+            Email = "john@doe.com"
+        });
+
+        webApp.UseRenderer<Model>(
+            model =>
+            HtmlBuilder.FromDefault(
+                b =>
+                {
+                    b.HeadAppend(b.HtmlTitle("Users"));
+                    // Tailwind Play CDN
+                    b.AddScript("https://unpkg.com/@tailwindcss/browser@4");
+                    b.BodyAppend(
+                        b.HtmlA(
+                            b =>
+                            {
+                                b.SetClass("p-8 underline text-blue-800 text-sm");
+                                b.SetHref("/docs");
+                            },
+                            b.Text("Go to backend")));
+
+                    if (model.Users.Any())
+                    {
+                        b.BodyAppend(
+                            b.HtmlDiv(
+                                b =>
+                                {
+                                    b.SetClass("flex flex-col gap-8 m-8");
+                                },
+                                model.Users.Select(x =>
+                                {
+                                    return b.HtmlDiv(
+                                        b =>
+                                        {
+                                            b.SetClass("flex flex-row gap-16 p-4 items-baseline rounded border border-blue-200");
+                                        },
+                                        b.HtmlDiv(b.Text(x.Name)),
+                                        b.HtmlDiv(b.Text(x.Email)));
+                                }).ToArray()));
+                    }
+                    else
+                    {
+                        b.BodyAppend(
+                            b.HtmlDiv(
+                                b =>
+                                {
+                                    b.SetClass("p-8 text-gray-600");
+                                },
+                                b.Text("No users")));
+                    }
+
+                }).ToHtml());
+
+        string extraDbPath =
+            System.IO.Path.Combine(
+                RelativePath.SearchUpfolder(RelativePath.From.EntryPath, System.IO.Path.Combine("Metapsi.Tests")),
+                "TestData", "extra.db");
+
+        var extraDbQueue = new ServiceDoc.DbQueue(new SqliteQueue(extraDbPath));
+
+        await webApp.MapGroup("extra").UseDocs(
+            extraDbQueue,
+            b =>
+            {
+                b.AddDoc<ExtraClass>(x => x.Id);
+            });
+
+        await webApp.RunAsync();
+    }
+
+    public class ExtraClass
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string SomeExtraData { get; set; }
+    }
+
     public static async Task RunServiceDocTest()
     {
+
+        await ServiceDocNotWorkingTest();
+
+        Environment.Exit(0);
+
+
         var builder = WebApplication.CreateBuilder().AddMetapsi();
         var app = builder.Build().UseMetapsi();
         string dbPath =

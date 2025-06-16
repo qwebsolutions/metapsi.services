@@ -32,21 +32,21 @@ public static partial class WhatsAppService
         Func<NotificationPayloadObject, Task> onMessage,
         Func<HttpContext, System.Exception, Task> onException = null)
     {
-        Func<Web.HttpContext, Exception, Task> wrappedExceptionHandler =
+        Func<Web.CfHttpContext, Exception, Task> wrappedExceptionHandler =
             onException == null ? DefaultExceptionHandler :
             (httpContext, exception) => onException(httpContext.Context, exception);
 
         string rootEndpointName = Guid.NewGuid().ToString();
 
-        endpoint.MapGet(WebhookPath, (HttpContext httpContext) => HandleGetChallenge(new Web.HttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
-        endpoint.MapPost(WebhookPath, (HttpContext httpContext) => HandlePostToWebhook(new Web.HttpContext(httpContext), whatsAppSecret, onMessage, wrappedExceptionHandler));
-        endpoint.MapPost(PostMessagePath, (HttpContext httpContext) => HandlePostMessage(new Web.HttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
-        endpoint.MapPost(UploadMediaPath, (HttpContext httpContext) => HandlePostMedia(new Web.HttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
-        endpoint.MapGet(GetMediaPath + "/{mediaId}", (HttpContext httpContext, string mediaId) => HandleGetMedia(new Web.HttpContext(httpContext), mediaId, cloudApiClient, wrappedExceptionHandler));
+        endpoint.MapGet(WebhookPath, (HttpContext httpContext) => HandleGetChallenge(new Web.CfHttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
+        endpoint.MapPost(WebhookPath, (HttpContext httpContext) => HandlePostToWebhook(new Web.CfHttpContext(httpContext), whatsAppSecret, onMessage, wrappedExceptionHandler));
+        endpoint.MapPost(PostMessagePath, (HttpContext httpContext) => HandlePostMessage(new Web.CfHttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
+        endpoint.MapPost(UploadMediaPath, (HttpContext httpContext) => HandlePostMedia(new Web.CfHttpContext(httpContext), cloudApiClient, wrappedExceptionHandler));
+        endpoint.MapGet(GetMediaPath + "/{mediaId}", (HttpContext httpContext, string mediaId) => HandleGetMedia(new Web.CfHttpContext(httpContext), mediaId, cloudApiClient, wrappedExceptionHandler));
         endpoint.MapGet(
             "/",
             (HttpContext httpContext) => HandleGetApiOverview(
-                new Web.HttpContext(httpContext),
+                new Web.CfHttpContext(httpContext),
                 (RouteDescription routeDescription) =>
                 {
                     LinkGenerator linkGenerator = httpContext.RequestServices.GetRequiredService<LinkGenerator>();

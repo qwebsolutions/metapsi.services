@@ -37,6 +37,7 @@ public static partial class ServiceDoc
         b.BodyAppend(b.Hyperapp(model,
             (b, model) =>
             {
+                Metapsi.Shoelace.Binding.Register();
                 return b.RenderDocumentsList(model, idProperty);
             }));
     }

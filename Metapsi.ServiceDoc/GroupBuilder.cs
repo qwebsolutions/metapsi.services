@@ -64,7 +64,7 @@ namespace Metapsi
                 return ErrorPage($"Type {docType} is not valid");
             }
 
-            public async Task WriteInitApiResponse(string docType, Metapsi.Web.HttpResponse httpResponse)
+            public async Task WriteInitApiResponse(string docType, Metapsi.Web.CfHttpResponse httpResponse)
             {
                 if (docHandlers.TryGetValue(docType, out var handler))
                 {
@@ -72,7 +72,7 @@ namespace Metapsi
                 }
             }
 
-            public async Task WriteListDocumentsApiResponse(string docType, Metapsi.Web.HttpResponse httpResponse)
+            public async Task WriteListDocumentsApiResponse(string docType, Metapsi.Web.CfHttpResponse httpResponse)
             {
                 if (docHandlers.TryGetValue(docType, out var handler))
                 {
@@ -80,7 +80,7 @@ namespace Metapsi
                 }
             }
 
-            public async Task HandleSaveDocumentApi(string docType, HttpContext httpContext)
+            public async Task HandleSaveDocumentApi(string docType, CfHttpContext httpContext)
             {
                 if (docHandlers.TryGetValue(docType, out var handler))
                 {
@@ -88,7 +88,7 @@ namespace Metapsi
                 }
             }
 
-            public async Task HandleDeleteDocumentApi(string docType, HttpContext httpContext)
+            public async Task HandleDeleteDocumentApi(string docType, CfHttpContext httpContext)
             {
                 if (docHandlers.TryGetValue(docType, out var handler))
                 {
@@ -102,10 +102,10 @@ namespace Metapsi
             internal Func<Task> Migrate { get; set; }
             internal Func<Func<RouteDescription, string>, Task<DocTypeOverview>> GetDocTypeSummary { get; set; }
             internal Func<Func<RouteDescription, string>, Task<HtmlDocument>> GetListDocumentsPage { get; set; }
-            internal Func<Metapsi.Web.HttpResponse, Task> WriteInitApiResponse { get; set; }
-            internal Func<Metapsi.Web.HttpResponse, Task> WriteListDocumentsApiResponse { get; set; }
-            internal Func<HttpContext, Task> HandleSaveDocumentApi { get; set; }
-            internal Func<HttpContext, Task> HandleDeleteDocumentApi { get; set; }
+            internal Func<Metapsi.Web.CfHttpResponse, Task> WriteInitApiResponse { get; set; }
+            internal Func<Metapsi.Web.CfHttpResponse, Task> WriteListDocumentsApiResponse { get; set; }
+            internal Func<CfHttpContext, Task> HandleSaveDocumentApi { get; set; }
+            internal Func<CfHttpContext, Task> HandleDeleteDocumentApi { get; set; }
         }
 
         /// <summary>

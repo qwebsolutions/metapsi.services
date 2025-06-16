@@ -24,12 +24,12 @@ public static partial class WhatsAppService
     public const string UploadMediaPath = "uploadmedia";
     public const string GetMediaPath = "getmedia";
 
-    public static async Task DefaultExceptionHandler(this HttpContext httpContext, Exception ex)
+    public static async Task DefaultExceptionHandler(this CfHttpContext httpContext, Exception ex)
     {
         await httpContext.Response.SetStatusCode(500);
     }
 
-    public static async Task HandleGetApiOverview(this Web.HttpContext httpContext, Func<RouteDescription, string> findUrl)
+    public static async Task HandleGetApiOverview(this Web.CfHttpContext httpContext, Func<RouteDescription, string> findUrl)
     {
         await httpContext.Response.WriteJsonReponse(new ApiOverview()
         {
@@ -40,7 +40,7 @@ public static partial class WhatsAppService
         });
     }
 
-    public static async Task HandlePostMessage(this Web.HttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<HttpContext, System.Exception, Task> onException)
+    public static async Task HandlePostMessage(this Web.CfHttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<CfHttpContext, System.Exception, Task> onException)
     {
         try
         {
@@ -54,7 +54,7 @@ public static partial class WhatsAppService
         }
     }
 
-    public static async Task HandlePostMedia(this Web.HttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<HttpContext, Exception, Task> onException)
+    public static async Task HandlePostMedia(this Web.CfHttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<CfHttpContext, Exception, Task> onException)
     {
         try
         {
@@ -68,7 +68,7 @@ public static partial class WhatsAppService
         }
     }
 
-    public static async Task HandleGetMedia(this HttpContext httpContext, string mediaId, WhatsAppCloudApiClient apiClient, Func<HttpContext, Exception, Task> onException)
+    public static async Task HandleGetMedia(this CfHttpContext httpContext, string mediaId, WhatsAppCloudApiClient apiClient, Func<CfHttpContext, Exception, Task> onException)
     {
         try
         {
@@ -84,7 +84,7 @@ public static partial class WhatsAppService
         }
     }
 
-    public static async Task HandleGetChallenge(this HttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<HttpContext, Exception, Task> onException)
+    public static async Task HandleGetChallenge(this CfHttpContext httpContext, WhatsAppCloudApiClient apiClient, Func<CfHttpContext, Exception, Task> onException)
     {
         try
         {
@@ -98,10 +98,10 @@ public static partial class WhatsAppService
     }
 
     public static async Task HandlePostToWebhook(
-        this HttpContext httpContext,
+        this CfHttpContext httpContext,
         string appSecret,
         Func<NotificationPayloadObject, Task> onMessage,
-        Func<HttpContext, Exception, Task> onException)
+        Func<CfHttpContext, Exception, Task> onException)
     {
         try
         {
