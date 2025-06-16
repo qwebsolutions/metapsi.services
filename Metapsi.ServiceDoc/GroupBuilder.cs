@@ -474,8 +474,6 @@ namespace Metapsi
                 await docType.Value.Migrate();
             }
 
-            await EmbeddedFiles.AddAssembly(typeof(Metapsi.ServiceDoc).Assembly);
-
             //docsApp.GetRootPage = async (findApi) =>
             //{
             //    var docsOverviewModel = new DocsOverviewModel();

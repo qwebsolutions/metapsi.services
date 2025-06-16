@@ -17,11 +17,6 @@ namespace Metapsi
             DbQueue dbQueue,
             Action<DocsGroup> setProps)
         {
-            await EmbeddedFiles.AddAssembly(typeof(Metapsi.ServiceDoc).Assembly);
-            await EmbeddedFiles.Load.HtmlEmbeddedFiles();
-            await EmbeddedFiles.Load.ShoelaceEmbeddedFiles();
-            await EmbeddedFiles.Load.SyntaxCoreEmbeddedFiles();
-
             var docsApp = await CreateDocsApp(dc =>
             {
                 dc.UseSqliteQueue(dbQueue);

@@ -3,15 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Chat", "..\Metapsi.Chat\Metapsi.Chat.csproj", "{A878C68D-3591-4322-BBA0-B68F288D6A18}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.ServiceDoc", "..\Metapsi.ServiceDoc\Metapsi.ServiceDoc.csproj", "{5892A1CD-411E-4C4B-BD4D-F736F6C3503B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.SignIn", "..\Metapsi.SignIn\Metapsi.SignIn.csproj", "{1FF13741-E516-4E2E-9CE0-C3FB97221829}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.WhatsApp", "..\Metapsi.WhatsApp\Metapsi.WhatsApp.csproj", "{7C8AB940-E42D-41EE-8829-3D48F0B8683C}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Tests", "..\Metapsi.Tests\Metapsi.Tests.csproj", "{C34EC827-1046-4B9F-AF2D-01B3769F7317}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestScenario", "..\TestScenario\TestScenario.csproj", "{8D0341C5-8861-4030-A652-DA74D13D5FA1}"
 EndProject
@@ -21,26 +15,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A878C68D-3591-4322-BBA0-B68F288D6A18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A878C68D-3591-4322-BBA0-B68F288D6A18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A878C68D-3591-4322-BBA0-B68F288D6A18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A878C68D-3591-4322-BBA0-B68F288D6A18}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5892A1CD-411E-4C4B-BD4D-F736F6C3503B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5892A1CD-411E-4C4B-BD4D-F736F6C3503B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5892A1CD-411E-4C4B-BD4D-F736F6C3503B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5892A1CD-411E-4C4B-BD4D-F736F6C3503B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1FF13741-E516-4E2E-9CE0-C3FB97221829}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1FF13741-E516-4E2E-9CE0-C3FB97221829}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1FF13741-E516-4E2E-9CE0-C3FB97221829}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1FF13741-E516-4E2E-9CE0-C3FB97221829}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7C8AB940-E42D-41EE-8829-3D48F0B8683C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7C8AB940-E42D-41EE-8829-3D48F0B8683C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C8AB940-E42D-41EE-8829-3D48F0B8683C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C8AB940-E42D-41EE-8829-3D48F0B8683C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C34EC827-1046-4B9F-AF2D-01B3769F7317}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D0341C5-8861-4030-A652-DA74D13D5FA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
