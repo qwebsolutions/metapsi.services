@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 
-  <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.dev.sln'">
-  	<MetapsiVersion>0.17.0</MetapsiVersion>
+  <PropertyGroup>
+    <MetapsiVersion>0.17.0</MetapsiVersion>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.sln'">
-  	<MetapsiVersion>*</MetapsiVersion>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <MetapsiVersion>*</MetapsiVersion>
-  </PropertyGroup>
-
-	<Target Name="NugetVersion" AfterTargets="Build" >
-		<Message Text="==================== $(ProjectDir) Metapsi version:$(MetapsiVersion)" Importance="high"/>
-	</Target>
+  <Target Name="NugetVersion" AfterTargets="Build" >
+	<Message Text="==== $(ProjectDir) Metapsi version:$(MetapsiVersion)" Importance="high"/>
+  </Target>
 
 </Project>
