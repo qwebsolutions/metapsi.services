@@ -2,7 +2,7 @@
 <Project>
 
   <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.dev.sln'">
-  	<MetapsiVersion>0.16.4</MetapsiVersion>
+  	<MetapsiVersion>0.17.0</MetapsiVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(SolutionFileName) == 'metapsi.services.sln'">
