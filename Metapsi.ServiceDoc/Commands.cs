@@ -180,7 +180,7 @@ public static partial class ServiceDoc
         }
     }
 
-    public class DeleteReturnDocumentsCommand<T, TProp> : IDisposable//, IAsyncDisposable
+    public partial class DeleteReturnDocumentsCommand<T, TProp> : IDisposable//, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -191,18 +191,6 @@ public static partial class ServiceDoc
             var p1 = DbCommand.CreateParameter();
             p1.ParameterName = "@value";
             DbCommand.Parameters.Add(p1);
-        }
-
-        public async IAsyncEnumerable<T> IterateAsync(TProp value)
-        {
-            this.DbCommand.Parameters[0].Value = value;
-            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
-            while (await dbReader.ReadAsync())
-            {
-                var json = dbReader.GetString(0);
-                var document = Metapsi.Serialize.FromJson<T>(json);
-                yield return document;
-            }
         }
 
         public async Task<List<T>> ExecuteAsync(TProp value)
@@ -325,7 +313,7 @@ public static partial class ServiceDoc
         }
     }
 
-    public class GetDocumentsCommand<T, TProp> : IDisposable//, IAsyncDisposable
+    public partial class GetDocumentsCommand<T, TProp> : IDisposable//, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -336,18 +324,6 @@ public static partial class ServiceDoc
             var p1 = DbCommand.CreateParameter();
             p1.ParameterName = "@value";
             DbCommand.Parameters.Add(p1);
-        }
-
-        public async IAsyncEnumerable<T> IterateAsync(TProp value)
-        {
-            this.DbCommand.Parameters[0].Value = value;
-            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
-            while (await dbReader.ReadAsync())
-            {
-                var json = dbReader.GetString(0);
-                var document = Metapsi.Serialize.FromJson<T>(json);
-                yield return document;
-            }
         }
 
         public async Task<List<T>> ExecuteAsync(TProp value)
@@ -376,7 +352,7 @@ public static partial class ServiceDoc
         }
     }
 
-    public class ListDocumentsCommand<T> : IDisposable//, IAsyncDisposable
+    public partial class ListDocumentsCommand<T> : IDisposable//, IAsyncDisposable
     {
         public DbCommand DbCommand { get; private set; }
 
@@ -384,17 +360,6 @@ public static partial class ServiceDoc
         {
             DbCommand = dbConnection.CreateCommand();
             DbCommand.CommandText = CommandBuilder.GetListDocumentsStatement(typeof(T));
-        }
-
-        public async IAsyncEnumerable<T> IterateAsync()
-        {
-            using var dbReader = await this.DbCommand.ExecuteReaderAsync();
-            while (await dbReader.ReadAsync())
-            {
-                var json = dbReader.GetString(0);
-                var document = Metapsi.Serialize.FromJson<T>(json);
-                yield return document;
-            }
         }
 
         public async Task<List<T>> ExecuteAsync()

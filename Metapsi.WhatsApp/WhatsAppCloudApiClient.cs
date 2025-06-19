@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Metapsi.WhatsApp;
@@ -172,10 +171,7 @@ public static class WhatsAppCloudApiExtensions
             $"https://graph.facebook.com/{apiClient.ApiVersion}/{businessNumberId}/messages");
         request.Headers.Add("Authorization", "Bearer " + apiClient.BearerToken);
 
-        string jsonString = JsonSerializer.Serialize(message, options: new JsonSerializerOptions()
-        {
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        });
+        string jsonString = Metapsi.Serialize.ToJson(message);
 
         // Create StringContent with UTF8 encoding and application/json media type
         request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");

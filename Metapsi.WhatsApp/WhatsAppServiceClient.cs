@@ -87,7 +87,7 @@ public static class WhatsAppClientExtensions
         CancellationToken cancellationToken = default)
     {
         // Serialize the object to JSON
-        string json = System.Text.Json.JsonSerializer.Serialize(value);
+        string json = Metapsi.Serialize.ToJson(value);
 
         // Create StringContent with JSON and correct media type
         var content = new StringContent(json, Encoding.UTF8, "application/json");
