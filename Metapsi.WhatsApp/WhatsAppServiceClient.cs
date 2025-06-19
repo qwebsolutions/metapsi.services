@@ -31,7 +31,7 @@ public class UploadMediaRequest
     public string FilePath { get; set; }
 }
 
-public static class WhatsAppClientExtensions
+public static partial class WhatsAppClientExtensions
 {
     public static async Task<PostMessageResponse> PostMessage(this WhatsAppServiceClient client, MessageObject message)
     {
