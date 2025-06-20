@@ -4,13 +4,13 @@ namespace Metapsi.WhatsApp;
 
 public static partial class WhatsAppClientExtensions
 {
-    public static async Task SendSignInCode(
+    public static async Task<PostMessageResponse> SendSignInCode(
         this WhatsAppServiceClient whatsAppServiceClient,
         string phoneNumber,
         string accessCode,
         string languageCode)
     {
-        await whatsAppServiceClient.PostMessage(
+        return await whatsAppServiceClient.PostMessage(
             WhatsAppMessage.Template(
                 phoneNumber,
                 "otp_code",
