@@ -5,12 +5,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.ServiceDoc", "Metapsi.ServiceDoc\Metapsi.ServiceDoc.csproj", "{15A376A4-1C51-45A0-AB14-73E16072B975}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Tests", "Metapsi.Tests\Metapsi.Tests.csproj", "{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.Chat", "Metapsi.Chat\Metapsi.Chat.csproj", "{16E62001-B53D-4BB8-B766-8944067B64A3}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.SignIn", "Metapsi.SignIn\Metapsi.SignIn.csproj", "{43C754E4-572B-460E-AFE0-7814612F6FF5}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Metapsi.WhatsApp", "Metapsi.WhatsApp\Metapsi.WhatsApp.csproj", "{E8C74CF6-9ADC-4A1E-B1CF-92D27C85BAF7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestScenario", "TestScenario\TestScenario.csproj", "{A1CFFC7F-6D52-4302-9102-CBEA0115A8CC}"
@@ -25,18 +19,6 @@ Global
 		{15A376A4-1C51-45A0-AB14-73E16072B975}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{15A376A4-1C51-45A0-AB14-73E16072B975}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{15A376A4-1C51-45A0-AB14-73E16072B975}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EC4AEB93-2A2A-4507-A40C-C7EA3ACE723E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{16E62001-B53D-4BB8-B766-8944067B64A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{16E62001-B53D-4BB8-B766-8944067B64A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{16E62001-B53D-4BB8-B766-8944067B64A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{16E62001-B53D-4BB8-B766-8944067B64A3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{43C754E4-572B-460E-AFE0-7814612F6FF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{43C754E4-572B-460E-AFE0-7814612F6FF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{43C754E4-572B-460E-AFE0-7814612F6FF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{43C754E4-572B-460E-AFE0-7814612F6FF5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E8C74CF6-9ADC-4A1E-B1CF-92D27C85BAF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E8C74CF6-9ADC-4A1E-B1CF-92D27C85BAF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E8C74CF6-9ADC-4A1E-B1CF-92D27C85BAF7}.Release|Any CPU.ActiveCfg = Release|Any CPU

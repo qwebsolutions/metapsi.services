@@ -32,7 +32,7 @@ public static partial class ServiceDoc
 
     internal static void Render<T, TId>(HtmlBuilder b, ListDocsPage<T> model, Expression<Func<T, TId>> idProperty)
     {
-        b.AddStylesheet();
+        b.AddServiceDocStylesheet();
         b.HeadAppend(b.HtmlStyle(b.Text(".sl-toast-stack { left: 50%; transform: translateX(-50%); }")));
         b.BodyAppend(b.Hyperapp(model,
             (b, model) =>
@@ -476,19 +476,20 @@ public static partial class ServiceDoc
         });
     }
 
-    private static void AddStylesheet(this HtmlBuilder b)
+    private static void AddServiceDocStylesheet(this HtmlBuilder b)
     {
+        var embeddedCss = b.Document.Metadata.AddEmbeddedResourceMetadata(typeof(Metapsi.ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
         //StaticFiles.Add(typeof(ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
 
-        b.HeadAppend(
-            b.HtmlLink(
-                b =>
-                {
-                    b.SetAttribute("rel", "stylesheet");
-                    b.SetAttribute("href", "/Metapsi.ServiceDoc.css");
-                }));
-    }
+        var link = new HtmlTag("link");
+        link.SetAttribute("rel", "stylesheet");
+        link.SetAttribute("href", embeddedCss);
 
+        b.HeadAppend(new HtmlNode()
+        {
+            Tags = new List<HtmlTag>() { link }
+        });
+    }
 
     public static Var<List<TItem>> FilterList<TItem>(
         this SyntaxBuilder b,

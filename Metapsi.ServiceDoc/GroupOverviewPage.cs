@@ -23,7 +23,7 @@ namespace Metapsi
     {
         internal static void Render(HtmlBuilder b, DocsOverviewModel model)
         {
-            b.AddStylesheet();
+            b.AddServiceDocStylesheet();
             b.BodyAppend(b.Hyperapp(model,
                 (b, model) =>
                 {
