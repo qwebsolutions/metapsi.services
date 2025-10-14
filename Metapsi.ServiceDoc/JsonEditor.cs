@@ -716,7 +716,15 @@ public static partial class JsonEditorExtensions
                     b =>
                     {
                         b.SetPlaceholder("value");
-                        b.BindTo(b.Get(node, x => x.StringProperties), x => x.Value);
+                        b.SetValue(b.Get(node, x => x.StringProperties.Value));
+                        b.OnSlInput((SyntaxBuilder b, Var<object> model, Var<Html.Event> e) =>
+                        {
+                            b.Set(
+                                b.Get(node, x => x.StringProperties),
+                                x => x.Value,
+                                b.GetTargetValue(e));
+                            return b.Clone(model);
+                        });
                     })));
     }
 
