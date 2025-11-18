@@ -2,7 +2,7 @@
 <Project>
 
   <PropertyGroup>
-    <MetapsiVersion>0.26.2</MetapsiVersion>
+    <MetapsiVersion>0.26.3</MetapsiVersion>
   </PropertyGroup>
 
   <Target Name="NugetVersion" AfterTargets="Build" >
