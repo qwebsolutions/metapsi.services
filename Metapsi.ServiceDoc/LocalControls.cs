@@ -64,7 +64,7 @@ namespace Metapsi
                         b =>
                         {
                             // ignore model, use reference
-                            b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), BoolPropertyExpression<TEntity>(property.Name));
+                            b.BindTo(entity, BoolPropertyExpression<TEntity>(property.Name));
                         },
                         b.Text(b.FormatLabel(b.Const(property.Name))));
                     b.Push(editControls, checkbox);
@@ -76,9 +76,7 @@ namespace Metapsi
                         {
                             b.SetTypeNumber();
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
-                            b.BindTo(
-                                model,
-                                b.Def((SyntaxBuilder b, Var<TModel> model) => entity), IntPropertyExpression<TEntity>(property.Name));
+                            b.BindTo(entity, IntPropertyExpression<TEntity>(property.Name));
                         });
                     b.Push(editControls, input);
                 }
@@ -88,7 +86,7 @@ namespace Metapsi
                         b =>
                         {
                             b.SetLabel(b.FormatLabel(b.Const(property.Name)));
-                            b.BindTo(model, b.Def((SyntaxBuilder b, Var<TModel> model) => entity), StringPropertyExpression<TEntity>(property.Name));
+                            b.BindTo(entity, StringPropertyExpression<TEntity>(property.Name));
                         });
                     b.Push(editControls, input);
                 }

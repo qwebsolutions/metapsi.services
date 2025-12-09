@@ -47,9 +47,10 @@ public static class Program
 
     public class User
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
     }
 
     public class Model
@@ -68,8 +69,15 @@ public static class Program
         RelativePath.SearchUpfolder(RelativePath.From.EntryPath, System.IO.Path.Combine("Metapsi.Tests")),
         "TestData", "test.db");
 
+        var connBuilder = new SQLiteConnectionStringBuilder();
+        connBuilder.BinaryGUID = false;
+        connBuilder.DataSource = dbPath;
+        //connBuilder.DateTimeFormat = SQLiteDateFormats.ISO8601;
+
+        var connectionString = $"Data Source=\"{dbPath}\";BinaryGUID=false;";
+
         // Create db access queue
-        var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(dbPath));
+        var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(connectionString));
         await webApp.MapGroup("docs").UseDocs(
             dbQueue,
             b =>

@@ -71,6 +71,10 @@ public static class JsonSchemaExtensions
                 outType.type = "array";
                 outType.items = GetJsonSchemaType(type.GenericTypeArguments.First());
             }
+            else if (type.Name == "DateTime")
+            {
+                outType.type = "string";
+            }
             else
             {
                 var publicProperties = type.GetProperties();
