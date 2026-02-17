@@ -63,11 +63,17 @@ public class JsonEditorNodeArrayProperties
     public List<JsonEditorDataNode> Items { get; set; } = new();
 }
 
+//public class JsonEditorModel
+//{
+//    public JsonEditorDataNode RootNode { get; set; }
+//    public JsonEditorDataNode SelectedNode { get; set; }
+//}
+
 public static partial class JsonEditorExtensions
 {
     public static JsonEditorDataNode JsonEditorEmptyDataNode { get; set; } = new() { Id = string.Empty };
-    public static Reference<JsonEditorDataNode> JsonEditorRootDataNode { get; set; } = new Reference<JsonEditorDataNode>();
-    public static Reference<JsonEditorDataNode> JsonEditorSelectedDataNode { get; set; } = new Reference<JsonEditorDataNode>();
+    //public static Reference<JsonEditorDataNode> JsonEditorRootDataNode { get; set; } = new Reference<JsonEditorDataNode>();
+    //public static Reference<JsonEditorDataNode> JsonEditorSelectedDataNode { get; set; } = new Reference<JsonEditorDataNode>();
 
     public static Var<JsonEditorDataNode> CreateObjectNode(
         this SyntaxBuilder b,
@@ -283,7 +289,11 @@ public static partial class JsonEditorExtensions
     {
         return b.JsonEditorSwitchType(
             b.Get(schemaType, x => x.type),
-            defaultValue: b.Const(JsonEditorEmptyDataNode),
+            defaultValue: b.NewObj<JsonEditorDataNode>(
+                b =>
+                {
+                    b.Set(x => x.Id, string.Empty);
+                }),
             ifObject: b => b.Call(CreateObjectNode, data, schemaType, nodeName, nodeId),
             ifArray: b => b.Call(CreateArrayNode, data, schemaType, nodeName, nodeId),
             ifString: b => b.Call(CreateStringNode, data, schemaType, nodeName, nodeId),
@@ -300,7 +310,11 @@ public static partial class JsonEditorExtensions
     {
         return b.JsonEditorSwitchType(
             b.Get(schemaType, x => x.type),
-            defaultValue: b.Const(JsonEditorEmptyDataNode),
+            defaultValue: b.NewObj<JsonEditorDataNode>(
+                b =>
+                {
+                    b.Set(x => x.Id, string.Empty);
+                }),
             ifObject: b => b.Call(CreateObjectNode, b.NewObj<object>(), schemaType, nodeName, nodeId),
             ifArray: b => b.Call(CreateArrayNode, b.NewCollection<object>().As<object>(), schemaType, nodeName, nodeId),
             ifString: b => b.Call(CreateStringNode, b.Const(string.Empty).As<object>(), schemaType, nodeName, nodeId),
@@ -346,18 +360,21 @@ public static partial class JsonEditorExtensions
                 b => b.NewCollection<JsonEditorDataNode>()));
     }
 
-    public static Var<IVNode> JsonEditor(this LayoutBuilder b, Var<JsonEditorDataNode> rootNode)
+    public static Var<IVNode> JsonEditor<TModel>(
+        this LayoutBuilder b, 
+        Var<JsonEditorDataNode> rootNode,
+        Var<HyperType.Action<TModel, JsonEditorDataNode>> onSelectedNodeChanged)
     {
         return b.SlTree(
             b =>
             {
-                b.OnSlSelectionChange(b.MakeAction((SyntaxBuilder b, Var<object> model, Var<CustomEvent<SlSelectionChangeDetail>> args) =>
+                b.OnSlSelectionChange(b.MakeAction((SyntaxBuilder b, Var<TModel> model, Var<CustomEvent<SlSelectionChangeDetail>> args) =>
                 {
                     var firstItem = b.Get(args, x => x.detail.selection.First());
                     var selectedId = b.GetProperty<string>(firstItem, "id");
 
                     var selectedNode = b.SearchRecursive(
-                        b.GetRef(b.Const(JsonEditorRootDataNode)),
+                        rootNode,
                         b.Def<SyntaxBuilder, JsonEditorDataNode, List<JsonEditorDataNode>>(JsonEditorDataNodeChildren),
                         b.Def((SyntaxBuilder b, Var<JsonEditorDataNode> node) =>
                         {
@@ -365,13 +382,11 @@ public static partial class JsonEditorExtensions
                         }),
                         b.Const(JsonEditorEmptyDataNode));
 
-                    b.SetRef(b.Const(JsonEditorSelectedDataNode), selectedNode);
-
-                    return b.Clone(model);
+                    return b.MakeActionDescriptor(onSelectedNodeChanged, selectedNode);
                 }));
             },
             b.Map(
-                b.Get(b.GetRef(b.Const(JsonEditorRootDataNode)), x => x.ObjectProperties.Properties),
+                b.Get(rootNode, x => x.ObjectProperties.Properties),
                 (b, property) =>
                 {
                     return b.JsonEditorTreeItem(property);
@@ -395,6 +410,7 @@ public static partial class JsonEditorExtensions
             b =>
             {
                 b.SetId(b.Get(node, x => x.Id));
+                //b.SetProperty(b.Props, "jsonTreeNode", node);
                 b.SetExpanded();
             },
             children);
@@ -1061,19 +1077,19 @@ public static partial class JsonEditorExtensions
                 }));
     }
 
-    public static Var<JsonEditorDataNode> JsonEditorGetRootNode(this SyntaxBuilder b)
-    {
-        return b.GetRef(b.Const(JsonEditorRootDataNode));
-    }
+    //public static Var<JsonEditorDataNode> JsonEditorGetRootNode(this SyntaxBuilder b)
+    //{
+    //    return b.GetRef(b.Const(JsonEditorRootDataNode));
+    //}
 
-    public static Var<JsonEditorDataNode> JsonEditorGetSelectedNode(this SyntaxBuilder b)
-    {
-        return b.GetRef(b.Const(JsonEditorSelectedDataNode));
-    }
+    //public static Var<JsonEditorDataNode> JsonEditorGetSelectedNode(this SyntaxBuilder b)
+    //{
+    //    return b.GetRef(b.Const(JsonEditorSelectedDataNode));
+    //}
 
-    public static Var<IVNode> JsonEditorSelectedNodeOptions(this LayoutBuilder b)
+    public static Var<IVNode> JsonEditorSelectedNodeOptions(this LayoutBuilder b, Var<JsonEditorDataNode> selectedNode)
     {
-        var selectedNode = b.JsonEditorGetSelectedNode();
+        //var selectedNode = b.Get(model, x => x.SelectedNode);
         return b.If(
             b.HasObject(selectedNode),
             b =>
@@ -1240,7 +1256,10 @@ public static partial class JsonEditorExtensions
             });
     }
 
-    public static Var<IVNode> JsonEditorPreview(this LayoutBuilder b, Var<JsonEditorDataNode> currentNode)
+    public static Var<IVNode> JsonEditorPreview(
+        this LayoutBuilder b,
+        Var<JsonEditorDataNode> currentNode,
+        Var<JsonEditorDataNode> selectedNode)
     {
         return b.Optional(
             b.HasObject(currentNode),
@@ -1250,12 +1269,13 @@ public static partial class JsonEditorExtensions
                 {
                     b.SetClass("text-sm text-gray-600 font-mono");
                 },
-                b.JsonEditorPreviewLine(currentNode, b.Const(0), b.Const(true), b.Const(true))));
+                b.JsonEditorPreviewLine(currentNode, selectedNode, b.Const(0), b.Const(true), b.Const(true))));
     }
 
     public static Var<IVNode> JsonEditorPreviewLine(
         this LayoutBuilder b,
         Var<JsonEditorDataNode> currentNode,
+        Var<JsonEditorDataNode> selectedNode,
         Var<int> indentLevel,
         Var<bool> isLastChild,
         Var<bool> isInArray)
@@ -1269,7 +1289,7 @@ public static partial class JsonEditorExtensions
                     {
                         b.SetId(b.Concat(b.Const("preview-"), b.Get(currentNode, x => x.Id)));
                         b.If(
-                            b.AreEqual(currentNode, b.GetRef(b.Const(JsonEditorSelectedDataNode))),
+                            b.AreEqual(currentNode, selectedNode),
                             b =>
                             {
                                 b.AddClass("text-gray-800 font-semibold");
@@ -1299,7 +1319,15 @@ public static partial class JsonEditorExtensions
                                 (b, child, index) =>
                                 {
                                     var isLast = b.Get(childrenCount, index, (childrenCount, index) => childrenCount == index + 1);
-                                    b.Push(vdomChildren, b.Call(JsonEditorPreviewLine, child, nextIndentLevel, isLastChild, b.Const(false)));
+                                    b.Push(
+                                        vdomChildren,
+                                        b.Call(
+                                            JsonEditorPreviewLine,
+                                            child,
+                                            selectedNode,
+                                            nextIndentLevel,
+                                            isLastChild,
+                                            b.Const(false)));
                                 });
 
                             b.Push(vdomChildren,
@@ -1337,7 +1365,15 @@ public static partial class JsonEditorExtensions
                                 (b, child, index) =>
                                 {
                                     var isLast = b.Get(childrenCount, index, (childrenCount, index) => childrenCount == index + 1);
-                                    b.Push(vdomChildren, b.Call(JsonEditorPreviewLine, child, nextIndentLevel, isLastChild, b.Const(true)));
+                                    b.Push(
+                                        vdomChildren,
+                                        b.Call(
+                                            JsonEditorPreviewLine,
+                                            child,
+                                            selectedNode,
+                                            nextIndentLevel,
+                                            isLastChild,
+                                            b.Const(true)));
                                 });
 
                             b.Push(vdomChildren,

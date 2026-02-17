@@ -11,15 +11,6 @@ public static partial class ServiceDoc
 {
     public class CommandBuilder
     {
-        DbCommand command = null;
-        private int ParameterIndex = 0;
-        private StringBuilder stringBuilder = new StringBuilder();
-
-        public CommandBuilder(DbConnection connection)
-        {
-            command = connection.CreateCommand();
-        }
-
         public static string GetInsertStatement(System.Type type, string parameterName)
         {
             var tableName = GetTableName(type);

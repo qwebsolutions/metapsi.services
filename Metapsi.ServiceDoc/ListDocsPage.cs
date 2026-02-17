@@ -41,7 +41,7 @@ public static partial class ServiceDoc
             }));
     }
 
-    private static Var<string> EntityName<T>(this SyntaxBuilder b)
+    internal static Var<string> EntityName<T>(this SyntaxBuilder b)
     {
         return b.Const(typeof(T).Name);
     }
@@ -59,7 +59,7 @@ public static partial class ServiceDoc
             b.FilterBox(model),
             b.DocsGrid(model, idProperty),
             b.PageHeader<T>(), // Added after content for Z layer
-            b.EditDocumentPopup(model, idProperty),
+            //b.EditDocumentPopup(model, idProperty),
             b.RemoveDocumentPopup<T, TId>(idProperty));
     }
 
@@ -113,156 +113,156 @@ public static partial class ServiceDoc
                     })));
     }
 
-    public static Reference<bool> isInRawEdit = new Reference<bool>() { Value = false };
+    //public static Reference<bool> isInRawEdit = new Reference<bool>() { Value = false };
 
-    public static Var<bool> IsInRawEdit(this SyntaxBuilder b)
-    {
-        return b.GetRef(b.Const(isInRawEdit));
-    }
+    //public static Var<bool> IsInRawEdit(this SyntaxBuilder b)
+    //{
+    //    return b.GetRef(b.Const(isInRawEdit));
+    //}
 
-    public static void SetRawEdit(this SyntaxBuilder b, Var<bool> value)
-    {
-        b.SetRef(b.Const(isInRawEdit), value);
-    }
+    //public static void SetRawEdit(this SyntaxBuilder b, Var<bool> value)
+    //{
+    //    b.SetRef(b.Const(isInRawEdit), value);
+    //}
 
-    public static Var<IVNode> EditDocumentPopup<T, TId>(
-        this LayoutBuilder b,
-        Var<ServiceDoc.ListDocsPage<T>> model,
-        Expression<Func<T, TId>> idProperty)
-    {
-        var getId = DefineGetIdAsString(b, idProperty);
-        var isNew = b.Get(model, getId, (model, getId) => model.EditDocument == null || !model.Documents.Any(x => getId(x) == getId(model.EditDocument)));
-        var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
+    //public static Var<IVNode> EditDocumentPopup<T, TId>(
+    //    this LayoutBuilder b,
+    //    Var<ServiceDoc.ListDocsPage<T>> model,
+    //    Expression<Func<T, TId>> idProperty)
+    //{
+    //    var getId = DefineGetIdAsString(b, idProperty);
+    //    var isNew = b.Get(model, getId, (model, getId) => model.EditDocument == null || !model.Documents.Any(x => getId(x) == getId(model.EditDocument)));
+    //    var caption = b.If(isNew, x => b.Const("Create new "), b => b.Const("Edit "));
 
-        //var buildContent = (LayoutBuilder b) => b.AutoEditForm(model, b.Get(model, x => x.EditDocument));
-        var buildContent = (LayoutBuilder b) =>
-        b.If(
-            b.IsInRawEdit(),
-            b =>
-            {
-                return b.RawEditTextArea(model);
-            },
-            b =>
-            {
-                return b.HtmlDiv(
-                    b =>
-                    {
-                        b.AddClass("flex md:flex-row md:justify-between gap-4 flex-col items-stretch");
-                    },
-                    b.JsonEditor(b.JsonEditorGetRootNode()),
-                    b.JsonEditorPreview(b.JsonEditorGetRootNode()));
-            });
-        return b.SlDialog(
-            b =>
-            {
-                b.AddStyle("--width", "800px");
-                b.SetId(b.Const(IdEditDocument));
-                //b.SetLabel());
-            },
-            b.Optional(
-                b.HasObject(
-                    b.Get(model, x => x.EditDocument)),
-                    b =>
-                    {
-                        return b.HtmlDiv(
-                            b =>
-                            {
-                                b.SetSlot(SlDialog.Slot.Label);
-                                b.AddClass("flex flex-row gap-8 items-center");
-                            },
-                            b.HtmlDiv(b.Text(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))))),
-                            b.HtmlDiv(
-                                b.SlCheckbox(
-                                    b =>
-                                    {
-                                        b.SetChecked(b.IsInRawEdit());
-                                        b.OnSlChange((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
-                                        {
-                                            b.SetRawEdit(b.GetTargetChecked(e));
-                                            return b.Clone(model);
-                                        });
-                                    },
-                                    b.Text("Raw"))));
-                    }),
-            b.Optional(
-                b.HasObject(b.Get(model, x => x.EditDocument)),
-                b => b.Call(buildContent)),
-            b.If(
-                b.IsInRawEdit(),
-                b =>
-                {
-                    // Raw edit does not show node options and does not extract json from editor
-                    return b.SlButton(
-                        b =>
-                        {
-                            b.SetSlot(SlDialog.Slot.Footer);
-                            b.SetVariantPrimary();
+    //    //var buildContent = (LayoutBuilder b) => b.AutoEditForm(model, b.Get(model, x => x.EditDocument));
+    //    var buildContent = (LayoutBuilder b) =>
+    //    b.If(
+    //        b.IsInRawEdit(),
+    //        b =>
+    //        {
+    //            return b.RawEditTextArea(model);
+    //        },
+    //        b =>
+    //        {
+    //            return b.HtmlDiv(
+    //                b =>
+    //                {
+    //                    b.AddClass("flex md:flex-row md:justify-between gap-4 flex-col items-stretch");
+    //                },
+    //                b.JsonEditor(b.JsonEditorGetRootNode()),
+    //                b.JsonEditorPreview(b.JsonEditorGetRootNode()));
+    //        });
+    //    return b.SlDialog(
+    //        b =>
+    //        {
+    //            b.AddStyle("--width", "800px");
+    //            b.SetId(b.Const(IdEditDocument));
+    //            //b.SetLabel());
+    //        },
+    //        b.Optional(
+    //            b.HasObject(
+    //                b.Get(model, x => x.EditDocument)),
+    //                b =>
+    //                {
+    //                    return b.HtmlDiv(
+    //                        b =>
+    //                        {
+    //                            b.SetSlot(SlDialog.Slot.Label);
+    //                            b.AddClass("flex flex-row gap-8 items-center");
+    //                        },
+    //                        b.HtmlDiv(b.Text(b.Concat(caption, b.ToLowercase(b.FormatLabel(b.EntityName<T>()))))),
+    //                        b.HtmlDiv(
+    //                            b.SlCheckbox(
+    //                                b =>
+    //                                {
+    //                                    b.SetChecked(b.IsInRawEdit());
+    //                                    b.OnSlChange((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
+    //                                    {
+    //                                        b.SetRawEdit(b.GetTargetChecked(e));
+    //                                        return b.Clone(model);
+    //                                    });
+    //                                },
+    //                                b.Text("Raw"))));
+    //                }),
+    //        b.Optional(
+    //            b.HasObject(b.Get(model, x => x.EditDocument)),
+    //            b => b.Call(buildContent)),
+    //        b.If(
+    //            b.IsInRawEdit(),
+    //            b =>
+    //            {
+    //                // Raw edit does not show node options and does not extract json from editor
+    //                return b.SlButton(
+    //                    b =>
+    //                    {
+    //                        b.SetSlot(SlDialog.Slot.Footer);
+    //                        b.SetVariantPrimary();
 
-                            b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
-                            {
-                                return SaveDocument(b, model);
-                            }));
-                        },
-                        b.Text("Save"));
-                },
-                b =>
-                {
-                    return b.Optional(
-                        b.HasObject(b.Get(model, x => x.EditDocument)),
-                        b => b.HtmlDiv(
-                            b =>
-                            {
-                                b.SetSlot("footer");
-                                b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
-                                //b.SetProperty(b.Props, b.Const("key"), b.Call(getId, b.Get(model, x => x.EditDocument)));
-                            },
-                            b.JsonEditorSelectedNodeOptions(),
-                            b.SlButton(
-                                b =>
-                                {
-                                    b.SetVariantPrimary();
+    //                        b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+    //                        {
+    //                            return SaveDocument(b, model);
+    //                        }));
+    //                    },
+    //                    b.Text("Save"));
+    //            },
+    //            b =>
+    //            {
+    //                return b.Optional(
+    //                    b.HasObject(b.Get(model, x => x.EditDocument)),
+    //                    b => b.HtmlDiv(
+    //                        b =>
+    //                        {
+    //                            b.SetSlot("footer");
+    //                            b.AddClass("flex md:flex-row md:justify-between md:items-center flex-col items-stretch");
+    //                            //b.SetProperty(b.Props, b.Const("key"), b.Call(getId, b.Get(model, x => x.EditDocument)));
+    //                        },
+    //                        b.JsonEditorSelectedNodeOptions(),
+    //                        b.SlButton(
+    //                            b =>
+    //                            {
+    //                                b.SetVariantPrimary();
 
-                                    b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
-                                    {
-                                        // Extracts the json from the editor
-                                        b.Set(
-                                            model, x => x.EditDocument,
-                                            b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
-                                        b.Log(b.Get(model, x => x.EditDocument));
+    //                                b.OnClickAction(b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+    //                                {
+    //                                    // Extracts the json from the editor
+    //                                    b.Set(
+    //                                        model, x => x.EditDocument,
+    //                                        b.Deserialize<T>(b.JsonEditorGenerate(b.JsonEditorGetRootNode(), b.Const(0), b.Const(false))));
+    //                                    b.Log(b.Get(model, x => x.EditDocument));
 
-                                        return SaveDocument(b, model);
-                                    }));
-                                },
-                        b.Text("Save"))));
-                }));
-    }
+    //                                    return SaveDocument(b, model);
+    //                                }));
+    //                            },
+    //                    b.Text("Save"))));
+    //            }));
+    //}
 
-    public static Var<IVNode> RawEditTextArea<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
-    {
-        var editDoc = b.Get(model, x => x.EditDocument);
-        return b.Optional(
-            b.HasObject(editDoc),
-            b =>
-            {
-                var json = b.JsonStringify(
-                    editDoc, 
-                    b=>
-                    {
-                        b.SetSpace(b.Const(2));
-                    });
-                return b.SlTextarea(
-                    b =>
-                    {
-                        b.SetRows(12);
-                        b.SetValue(json);
-                        b.OnSlChange(b.MakeAction((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
-                        {
-                            b.Set(model, x => x.EditDocument, b.Deserialize<T>(b.GetTargetValue(e)));
-                            return b.Clone(model);
-                        }));
-                    });
-            });
-    }
+    //public static Var<IVNode> RawEditTextArea<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
+    //{
+    //    var editDoc = b.Get(model, x => x.EditDocument);
+    //    return b.Optional(
+    //        b.HasObject(editDoc),
+    //        b =>
+    //        {
+    //            var json = b.JsonStringify(
+    //                editDoc, 
+    //                b=>
+    //                {
+    //                    b.SetSpace(b.Const(2));
+    //                });
+    //            return b.SlTextarea(
+    //                b =>
+    //                {
+    //                    b.SetRows(12);
+    //                    b.SetValue(json);
+    //                    b.OnSlChange(b.MakeAction((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
+    //                    {
+    //                        b.Set(model, x => x.EditDocument, b.Deserialize<T>(b.GetTargetValue(e)));
+    //                        return b.Clone(model);
+    //                    }));
+    //                });
+    //        });
+    //}
 
 
 
@@ -312,13 +312,23 @@ public static partial class ServiceDoc
         var onResult = b.MakeAction(
             (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<T> result) =>
             {
-                b.Log("init result", result);
-                b.Set(model, x => x.EditDocument, result);
-                b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
-                var popup = b.GetElementById(b.Const(IdEditDocument));
-                b.SetProperty(popup, b.Const("open"), b.Const(true));
-                b.Log("model after init", model);
-                return b.Clone(model);
+                return b.MakeStateWithEffects(
+                    model,
+                    (b, dispatch) =>
+                    {
+                        var edit = b.EditDocumentPromise<T>(
+                            result,
+                            b.Get(model, x => x.DocumentSchema),
+                            b.Const(DocumentEditor.EditAction.Create));
+                        b.PromiseThen(edit, (SyntaxBuilder b, Var<object> updatedObject) =>
+                        {
+                            b.Dispatch(
+                                dispatch,
+                                b.MakeStateWithEffects(
+                                    model,
+                                    SaveDocumentEffect(b, updatedObject)));
+                        });
+                    });
             });
 
         var onError = b.MakeAction(
@@ -339,6 +349,38 @@ public static partial class ServiceDoc
                 b.Get(model, x => x.InitApiUrl),
                 onResult,
                 onError));
+    }
+
+    public static Var<HyperType.Effect> SaveDocumentEffect<T>(SyntaxBuilder b, Var<T> document)
+    {
+        var onResult = b.MakeAction(
+            (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<SaveResult> saveResult) =>
+            {
+                b.ToastResult(b.Get(saveResult, x => x.Success), b.Get(saveResult, x => x.Message));
+                return b.RefreshAllDocuments<T>();
+            });
+
+        var onError = b.MakeAction(
+            (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<Html.Error> apiError) =>
+            {
+                b.Alert(b.Get(apiError, x => x.message));
+                return b.RefreshAllDocuments<T>();
+            });
+
+        return b.MakeEffect(
+            (b, dispatch) =>
+            {
+                b.Dispatch(dispatch, b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
+                {
+                    return b.MakeStateWithEffects(
+                        model,
+                        b.PostJsonEffect(
+                            b.Get(model, x => x.SaveApiUrl),
+                            document,
+                            onResult,
+                            onError));
+                }));
+            });
     }
 
     public static Var<HyperType.StateWithEffects> SaveDocument<T>(SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model)
@@ -734,12 +776,32 @@ public static partial class ServiceDoc
                             DefineGetIdAsString(b, IdProperty),
                             (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
-                        b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
-                        b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
+                        //b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
+                        ////b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
 
-                        var popup = b.GetElementById(b.Const(IdEditDocument));
-                        b.SetProperty(popup, b.Const("open"), b.Const(true));
-                        return b.Clone(model);
+                        //b.Throw(b.Const("Not implemented!"));
+
+                        //var popup = b.GetElementById(b.Const(IdEditDocument));
+                        //b.SetProperty(popup, b.Const("open"), b.Const(true));
+                        //return b.Clone(model);
+
+                        return b.MakeStateWithEffects(
+                            model,
+                            (b, dispatch) =>
+                            {
+                                var edit = b.EditDocumentPromise<T>(
+                                    editDocReference,
+                                    b.Get(model, x => x.DocumentSchema),
+                                    b.Const(DocumentEditor.EditAction.Edit));
+                                b.PromiseThen(edit, (SyntaxBuilder b, Var<object> updatedObject) =>
+                                {
+                                    b.Dispatch(
+                                        dispatch,
+                                        b.MakeStateWithEffects(
+                                            model,
+                                            SaveDocumentEffect(b, updatedObject)));
+                                });
+                            });
 
                     }));
             });
@@ -763,7 +825,8 @@ public static partial class ServiceDoc
                             (model, id, getId) => model.Documents.Single(x => getId(x) == id));
 
                         b.Set(model, x => x.EditDocument, b.Clone(editDocReference));
-                        b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
+                        //b.SetJsonEditorRoot(b.Get(model, x => x.DocumentSchema), b.Get(model, x => x.EditDocument));
+                        b.Throw(b.Const("Not implemented!"));
 
                         var popup = b.GetElementById(b.Const(IdRemoveDocument));
                         b.SetProperty(popup, b.Const("open"), b.Const(true));
@@ -798,14 +861,14 @@ public static partial class ServiceDoc
         b.CreateTextNode(message));
     }
 
-    public static void SetJsonEditorRoot<T>(this SyntaxBuilder b, Var<SchemaType> documentSchema, Var<T> edited)
-    {
-        var rootNode = b.JsonEditorCreateNodeFromData(
-            documentSchema,
-            edited.As<object>(),
-            b.Const("-"),
-            b.Const("r"));
+    //public static void SetJsonEditorRoot<T>(this SyntaxBuilder b, Var<SchemaType> documentSchema, Var<T> edited)
+    //{
+    //    var rootNode = b.JsonEditorCreateNodeFromData(
+    //        documentSchema,
+    //        edited.As<object>(),
+    //        b.Const("-"),
+    //        b.Const("r"));
 
-        b.SetRef(b.Const(JsonEditorExtensions.JsonEditorRootDataNode), rootNode);
-    }
+    //    b.SetRef(b.Const(JsonEditorExtensions.JsonEditorRootDataNode), rootNode);
+    //}
 }

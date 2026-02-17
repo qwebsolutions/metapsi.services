@@ -91,33 +91,4 @@ public static class JsonSchemaExtensions
 
         return outType;
     }
-
-
-    //public static SchemaNode GetModelProperty(string propertyName, Type type)
-    //{
-    //    SchemaNode outModelProperty = new SchemaNode()
-    //    {
-    //        PropertyName = propertyName,
-    //        TypeId = type.GetSemiQualifiedTypeName(),
-    //        TypeName = type.Name,
-    //        IsList = type.Name == "List`1"
-    //    };
-
-    //    if (!Metapsi.Scalar.Type(type))
-    //    {
-    //        var dataType = type;
-    //        if (outModelProperty.IsList)
-    //        {
-    //            dataType = type.GenericTypeArguments.First();
-    //        }
-
-    //        var publicProperties = dataType.GetProperties();
-    //        foreach (var property in publicProperties)
-    //        {
-    //            outModelProperty.Children.Add(GetModelProperty(property.Name, property.PropertyType));
-    //        }
-    //    }
-
-    //    return outModelProperty;
-    //}
 }
