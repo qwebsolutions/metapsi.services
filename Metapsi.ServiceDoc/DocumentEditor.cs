@@ -173,7 +173,7 @@ public static class DocumentEditor
                             b.Set(model, x => x.SelectedNode, selectedNode);
                             return b.Clone(model);
                         })),
-                    b.JsonEditorPreview(
+                    b.JsonEditorJsonPreview(
                         b.Get(model, x => x.RootNode),
                         b.Get(model, x => x.SelectedNode)));
             });

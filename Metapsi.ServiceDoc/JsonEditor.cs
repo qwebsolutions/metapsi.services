@@ -949,6 +949,11 @@ public static partial class JsonEditorExtensions
                                 b.Get(node, x => x.ObjectProperties),
                                 x => x.IsNull,
                                 b.Const(true));
+
+                            b.Set(
+                                b.Get(node, x => x.ObjectProperties),
+                                x => x.Properties,
+                                b.NewCollection<JsonEditorDataNode>());
                             return b.Clone(model);
                         });
                     },
@@ -1120,10 +1125,12 @@ public static partial class JsonEditorExtensions
             ifObject: b =>
             {
                 var nextIndentLevel = b.Get(indentLevel, x => x + 1);
-
+                b.Log(currentNode);
                 return b.If(
                     b.Not(b.Get(currentNode, x => x.ObjectProperties.IsPresent)),
+                    // If not IsPresent
                     b => b.Const(string.Empty),
+                    // If IsPresent
                     b => b.Concat(
                         b.JsonEditorIndentSpace(indentLevel),
                         b.If(
@@ -1256,7 +1263,7 @@ public static partial class JsonEditorExtensions
             });
     }
 
-    public static Var<IVNode> JsonEditorPreview(
+    public static Var<IVNode> JsonEditorJsonPreview(
         this LayoutBuilder b,
         Var<JsonEditorDataNode> currentNode,
         Var<JsonEditorDataNode> selectedNode)
@@ -1284,6 +1291,8 @@ public static partial class JsonEditorExtensions
             b.JsonEditorDataNodeIsPresent(currentNode),
             b =>
             {
+                b.Log(currentNode);
+                b.Log("isLastChild", isLastChild);
                 return b.HtmlDiv(
                     b =>
                     {
@@ -1309,7 +1318,15 @@ public static partial class JsonEditorExtensions
                                         b.If(b.Not(isInArray), b => b.Const("\""), b => b.Const(string.Empty)),
                                         b.If(b.Not(isInArray), b => b.Get(currentNode, x => x.Name), b => b.Const(string.Empty)),
                                         b.If(b.Not(isInArray), b => b.Const("\":"), b => b.Const(string.Empty)),
-                                        b.Const("{")))));
+                                        b.If(
+                                            b.Get(currentNode, x => x.ObjectProperties.IsNull),
+                                            b => b.Concat(
+                                                b.Const("null"),
+                                                b.If(
+                                                    isLastChild,
+                                                    b => b.Const(""),
+                                                    b => b.Const(","))),
+                                            b => b.Const("{"))))));
 
                             var dataChildren = b.JsonEditorDataNodeChildren(currentNode);
                             var childrenCount = b.Get(dataChildren, x => x.Count());
@@ -1326,16 +1343,22 @@ public static partial class JsonEditorExtensions
                                             child,
                                             selectedNode,
                                             nextIndentLevel,
-                                            isLastChild,
+                                            isLast,
                                             b.Const(false)));
                                 });
 
-                            b.Push(vdomChildren,
-                                b.HtmlPre(
-                                    b.Text(b.Concat(
-                                        b.JsonEditorIndentSpace(indentLevel),
-                                        b.Const("}"),
-                                        b.If(isLastChild, b => b.Const(""), b => b.Const(","))))));
+                            b.If(
+                                b.Not(b.Get(currentNode, x => x.ObjectProperties.IsNull)),
+                                b =>
+                                {
+                                    b.Push(vdomChildren,
+                                        b.HtmlPre(
+                                            b.Text(b.Concat(
+                                                b.JsonEditorIndentSpace(indentLevel),
+                                                b.Const("}"),
+                                                b.If(isLastChild, b => b.Const(""), b => b.Const(","))))));
+
+                                });
 
                             return
                             b.HtmlDiv(
