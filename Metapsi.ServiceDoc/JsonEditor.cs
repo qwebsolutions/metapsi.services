@@ -545,10 +545,18 @@ public static partial class JsonEditorExtensions
                             b =>
                             {
                                 var selectedEnum = b.Get(node, node => node.SchemaType.enumValues.FirstOrDefault(x => x.Value == node.IntProperties.Value));
+                                var validatedEnum = b.If(
+                                    b.HasObject(selectedEnum),
+                                    b => selectedEnum,
+                                    b => b.NewObj<EnumValue>(
+                                        b =>
+                                        {
+                                            b.Set(x => x.Label, "Not valid");
+                                        }));
                                 return b.Concat(
-                                    b.Get(selectedEnum, x => x.Label),
+                                    b.Get(validatedEnum, x => x.Label),
                                     b.Const(" ("),
-                                    b.AsString(b.Get(selectedEnum, x => x.Value)),
+                                    b.AsString(b.Get(validatedEnum, x => x.Value)),
                                     b.Const(")"));
                             },
                             b =>
