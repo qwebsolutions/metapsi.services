@@ -226,6 +226,9 @@ public static partial class JsonEditorExtensions
         Var<string> nodeName,
         Var<string> nodeId)
     {
+        b.Log("intNode data", data);
+        b.Log("intNode schemaType", schemaType);
+
         var intProperties = b.NewObj<JsonEditorNodeIntProperties>(
             b =>
             {
@@ -524,6 +527,7 @@ public static partial class JsonEditorExtensions
     {
         var isPresent = b.Get(node, x => x.IntProperties.IsPresent);
 
+
         return b.HtmlDiv(
             b =>
             {
@@ -533,7 +537,25 @@ public static partial class JsonEditorExtensions
                 b.Get(node, x => x.Name),
                 b.If(
                     isPresent,
-                    b => b.AsString(b.Get(node, x => x.IntProperties.Value)),
+                    b =>
+                    {
+                        var isEnum = b.HasObject(b.Get(node, x => x.SchemaType.enumValues));
+                        return b.If(
+                            isEnum,
+                            b =>
+                            {
+                                var selectedEnum = b.Get(node, node => node.SchemaType.enumValues.FirstOrDefault(x => x.Value == node.IntProperties.Value));
+                                return b.Concat(
+                                    b.Get(selectedEnum, x => x.Label),
+                                    b.Const(" ("),
+                                    b.AsString(b.Get(selectedEnum, x => x.Value)),
+                                    b.Const(")"));
+                            },
+                            b =>
+                            {
+                                return b.AsString(b.Get(node, x => x.IntProperties.Value));
+                            });
+                    },
                     b => b.Const("")),
                 isPresent));
     }
@@ -870,22 +892,63 @@ public static partial class JsonEditorExtensions
             b.Optional(
                 b.Get(node, x => x.IntProperties.IsPresent),
                 b =>
-                b.SlInput(
+                b.If(
+                    b.HasObject(b.Get(node, x => x.SchemaType.enumValues)),
                     b =>
                     {
-                        b.SetTypeNumber();
-                        b.SetPlaceholder("value");
-                        b.SetValue(b.AsString(b.Get(node, x => x.IntProperties.Value)));
-                        b.OnSlInput((SyntaxBuilder b, Var<object> model, Var<Event> e) =>
+                        var selectedEnum = b.Get(node, node => node.SchemaType.enumValues.FirstOrDefault(x => x.Value == node.IntProperties.Value));
+
+                        return b.SlSelect(
+                            b =>
+                            {
+                                b.AddClass("text-left");
+                                b.If(
+                                    b.HasObject(selectedEnum),
+                                    b =>
+                                    {
+                                        b.SetValue(b.Get(selectedEnum, x => x.Label));
+                                    });
+                                b.OnSlChange((SyntaxBuilder b, Var<object> model, Var<Html.Event> e) =>
+                                {
+                                    var intProperties = b.Get(node, x => x.IntProperties);
+                                    var selectedLabel = b.GetTargetValue(e);
+                                    b.Set(intProperties, x => x.IsPresent, true);
+                                    var selectedEnum = b.Get(node, selectedLabel, (node, value) => node.SchemaType.enumValues.FirstOrDefault(x => x.Label == value));
+                                    b.Set(intProperties, x => x.Value, b.Get(selectedEnum, x => x.Value));
+                                    return b.Clone(model);
+                                });
+                            },
+                            b.Map(
+                                b.Get(node, x => x.SchemaType.enumValues),
+                                (b, option) =>
+                                {
+                                    return b.SlOption(
+                                        b =>
+                                        {
+                                            b.SetValue(b.Get(option, x => x.Label));
+                                        },
+                                        b.Text(b.Get(option, x => x.Label)),
+                                        b.Text(" ("),
+                                        b.Text(b.AsString(b.Get(option, x => x.Value))),
+                                        b.Text(")"));
+                                }));
+                    },
+                    b => b.SlInput(
+                        b =>
                         {
-                            var newValue = b.GetTargetValue(e);
-                            b.Set(
-                                b.Get(node, x => x.IntProperties),
-                                x => x.Value,
-                                b.ParseInt(newValue));
-                            return b.Clone(model);
-                        });
-                    })));
+                            b.SetTypeNumber();
+                            b.SetPlaceholder("value");
+                            b.SetValue(b.AsString(b.Get(node, x => x.IntProperties.Value)));
+                            b.OnSlInput((SyntaxBuilder b, Var<object> model, Var<Event> e) =>
+                            {
+                                var newValue = b.GetTargetValue(e);
+                                b.Set(
+                                    b.Get(node, x => x.IntProperties),
+                                    x => x.Value,
+                                    b.ParseInt(newValue));
+                                return b.Clone(model);
+                            });
+                        }))));
     }
 
     public static Var<IVNode> JsonEditorObjectOptions(this LayoutBuilder b, Var<JsonEditorDataNode> node)
@@ -1125,7 +1188,6 @@ public static partial class JsonEditorExtensions
             ifObject: b =>
             {
                 var nextIndentLevel = b.Get(indentLevel, x => x + 1);
-                b.Log(currentNode);
                 return b.If(
                     b.Not(b.Get(currentNode, x => x.ObjectProperties.IsPresent)),
                     // If not IsPresent
@@ -1291,8 +1353,6 @@ public static partial class JsonEditorExtensions
             b.JsonEditorDataNodeIsPresent(currentNode),
             b =>
             {
-                b.Log(currentNode);
-                b.Log("isLastChild", isLastChild);
                 return b.HtmlDiv(
                     b =>
                     {

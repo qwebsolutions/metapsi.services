@@ -6,15 +6,19 @@ namespace Metapsi;
 
 public class SchemaType
 {
+    // Type name
     public string type { get; set; }
-    public string description { get; set; }
-    public string format { get; set; }
-    public decimal minimum { get; set; }
-    public decimal maximum { get; set; }
-    public int minLength { get; set; }
-    public int maxLength { get; set; }
-    public string pattern { get; set; }
-    public List<string> @enum { get; set; } = new();
+
+
+    public List<EnumValue> enumValues { get; set; }
+    //public string description { get; set; }
+    //public string format { get; set; }
+    //public decimal minimum { get; set; }
+    //public decimal maximum { get; set; }
+    //public int minLength { get; set; }
+    //public int maxLength { get; set; }
+    //public string pattern { get; set; }
+    //public List<string> @enum { get; set; } = new();
 
     public List<SchemaProperty> properties { get; set; } = new();
     public SchemaType items { get; set; }
@@ -24,6 +28,12 @@ public class SchemaProperty
 {
     public string name { get; set; }
     public SchemaType type { get; set; }
+}
+
+public class EnumValue
+{
+    public int Value { get; set; }
+    public string Label { get; set; }
 }
 
 public static class JsonSchemaExtensions
@@ -64,6 +74,16 @@ public static class JsonSchemaExtensions
             if (type.IsEnum)
             {
                 outType.type = "integer";
+                outType.enumValues = new List<EnumValue>();
+                foreach (int enumValue in Enum.GetValues(type))
+                {
+                    var label = Enum.GetName(type, enumValue);
+                    outType.enumValues.Add(new EnumValue()
+                    {
+                        Value = enumValue,
+                        Label = label
+                    });
+                }
             }
             else
             if (type.Name == "List`1")
