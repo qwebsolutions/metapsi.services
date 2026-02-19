@@ -72,11 +72,11 @@ namespace Metapsi
                 }
             }
 
-            public async Task WriteListDocumentsApiResponse(string docType, Metapsi.Web.CfHttpResponse httpResponse)
+            public async Task WriteListDocumentsApiResponse(string docType, Metapsi.Web.CfHttpContext httpContext)
             {
                 if (docHandlers.TryGetValue(docType, out var handler))
                 {
-                    await handler.WriteListDocumentsApiResponse(httpResponse);
+                    await handler.WriteListDocumentsApiResponse(httpContext);
                 }
             }
 
@@ -103,7 +103,7 @@ namespace Metapsi
             internal Func<Func<RouteDescription, string>, Task<DocTypeOverview>> GetDocTypeSummary { get; set; }
             internal Func<Func<RouteDescription, string>, Task<HtmlDocument>> GetListDocumentsPage { get; set; }
             internal Func<Metapsi.Web.CfHttpResponse, Task> WriteInitApiResponse { get; set; }
-            internal Func<Metapsi.Web.CfHttpResponse, Task> WriteListDocumentsApiResponse { get; set; }
+            internal Func<CfHttpContext, Task> WriteListDocumentsApiResponse { get; set; }
             internal Func<CfHttpContext, Task> HandleSaveDocumentApi { get; set; }
             internal Func<CfHttpContext, Task> HandleDeleteDocumentApi { get; set; }
         }
@@ -246,7 +246,7 @@ namespace Metapsi
                     },
                     GetListDocumentsPage = async (findApi) =>
                     {
-                        var list = await docProps.List();
+                        //var list = await docProps.List();
 
                         var descriptionAttributes = typeof(T).CustomAttributes.Where(x => x.AttributeType == typeof(DocDescriptionAttribute));
 
@@ -274,7 +274,7 @@ namespace Metapsi
                             ListApiUrl = findApi(RouteDescription.New("list-api").Add("docType",docType)),
                             SaveApiUrl = findApi(RouteDescription.New("save-api").Add("docType", docType)),
                             DeleteApiUrl = findApi(RouteDescription.New("delete-api").Add("docType", docType)),
-                            Documents = list,
+                            //Documents = list,
                             SummaryHtml = summaryHtml,
                             Columns = docProps.FrontendDefaultColumns
                         };
@@ -291,10 +291,23 @@ namespace Metapsi
                         var newObject = await docProps.Create();
                         await httpResponse.WriteJsonReponse(newObject);
                     },
-                    WriteListDocumentsApiResponse = async (httpResponse) =>
+                    WriteListDocumentsApiResponse = async (httpContext) =>
                     {
+                        var searchInput = await httpContext.Request.ReadJsonBody<SearchInput>();
                         var newList = await docProps.List();
-                        await httpResponse.WriteJsonReponse(newList);
+                        var outList = new List<T>();
+                        foreach (var item in newList)
+                        {
+                            if (Metapsi.Serialize.ToJson(item).ToLowerInvariant().Contains(searchInput.Query.ToLowerInvariant()))
+                            {
+                                outList.Add(item);
+                            }
+                        }
+                        await httpContext.Response.WriteJsonReponse(new SearchResult<T>()
+                        {
+                            Items = outList,
+                            OutOfTotal = outList.Count
+                        });
                     },
                     HandleSaveDocumentApi = async (httpContext) =>
                     {

@@ -24,7 +24,8 @@ public static partial class ServiceDoc
         public SchemaType DocumentSchema { get; set; }
         public string SummaryHtml { get; set; }
         public List<string> Columns { get; set; } = new List<string>();
-        public string FilterText { get; set; }
+        public string SearchTerm { get; set; }
+        public int MaxResults { get; set; }
     }
 
     private const string IdEditDocument = "id-edit-document";
@@ -34,7 +35,12 @@ public static partial class ServiceDoc
     {
         b.AddServiceDocStylesheet();
         b.HeadAppend(b.HtmlStyle(b.Text(".sl-toast-stack { left: 50%; transform: translateX(-50%); }")));
-        b.BodyAppend(b.Hyperapp(model,
+        b.BodyAppend(
+            b.Hyperapp<ListDocsPage<T>>(
+            b => b.MakeInit(
+                b.MakeStateWithEffects(
+                    b.Const(model),
+                    (b, dispatch) => b.Dispatch(dispatch, b.RefreshAllDocuments<T>()))),
             (b, model) =>
             {
                 return b.RenderDocumentsList(model, idProperty);
@@ -63,6 +69,11 @@ public static partial class ServiceDoc
             b.RemoveDocumentPopup<T, TId>(idProperty));
     }
 
+    //public static Var<ListDocsPage<T>> SearchEntities<T>(this SyntaxBuilder b, Var<ListDocsPage<T>> model)
+    //{
+    //    return model;
+    //}
+
     public static Var<IVNode> FilterBox<T>(this LayoutBuilder b, Var<ListDocsPage<T>> model)
     {
         return b.HtmlDiv(
@@ -75,7 +86,19 @@ public static partial class ServiceDoc
                 {
                     b.SetPill();
                     b.SetClearable();
-                    b.BindTo(model, x => x.FilterText);
+                    b.OnSlInput(b.MakeAction((SyntaxBuilder b, Var<ListDocsPage<T>> model, Var<Html.Event> e) =>
+                    {
+                        var filterText = b.GetTargetValue(e);
+                        b.Set(model, x => x.SearchTerm, filterText);
+                        return b.MakeStateWithEffects(
+                            model,
+                            b.Debounce(
+                                b.Const(500),
+                                b.Call(RefreshAllDocuments<T>)));
+                                //b.MakeAction<ListDocsPage<T>>(RefreshAllDocuments<T>)));
+                    }));
+                    b.SetValue(b.Get(model, x => x.SearchTerm));
+                    //b.BindTo(model, x => x.FilterText);
                 },
                 b.SlIcon(
                     b =>
@@ -468,9 +491,9 @@ public static partial class ServiceDoc
         return b.MakeAction((SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model) =>
         {
             var onResult = b.MakeAction(
-                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<List<T>> result) =>
+                (SyntaxBuilder b, Var<ServiceDoc.ListDocsPage<T>> model, Var<SearchResult<T>> result) =>
                 {
-                    b.Set(model, x => x.Documents, result);
+                    b.Set(model, x => x.Documents, b.Get(result, x => x.Items));
                     return b.Clone(model);
                 });
 
@@ -483,8 +506,13 @@ public static partial class ServiceDoc
 
             return b.MakeStateWithEffects(
                 model,
-                b.GetJsonEffect(
+                b.PostJsonEffect(
                     b.Get(model, x => x.ListApiUrl),
+                    b.NewObj<SearchInput>(
+                        b=>
+                        {
+                            b.Set(x => x.Query, b.Get(model, x => x.SearchTerm));
+                        }),
                     onResult,
                     onError));
         });
@@ -533,19 +561,19 @@ public static partial class ServiceDoc
         });
     }
 
-    public static Var<List<TItem>> FilterList<TItem>(
-        this SyntaxBuilder b,
-        Var<List<TItem>> list,
-        Var<string> value)
-    {
-        var filteredItems = b.Get(
-            list,
-            value,
-            b.Def<SyntaxBuilder, TItem, string, bool>(ContainsValue),
-            (all, value, filterFunc) => all.Where(x => filterFunc(x, value)).ToList());
+    //public static Var<List<TItem>> FilterList<TItem>(
+    //    this SyntaxBuilder b,
+    //    Var<List<TItem>> list,
+    //    Var<string> value)
+    //{
+    //    var filteredItems = b.Get(
+    //        list,
+    //        value,
+    //        b.Def<SyntaxBuilder, TItem, string, bool>(ContainsValue),
+    //        (all, value, filterFunc) => all.Where(x => filterFunc(x, value)).ToList());
 
-        return filteredItems;
-    }
+    //    return filteredItems;
+    //}
 
     public static Var<bool> ContainsValue<T>(this SyntaxBuilder b, Var<T> item, Var<string> value)
     {
@@ -655,7 +683,9 @@ public static partial class ServiceDoc
                     b.Get(model, x => x.Documents.Any()),
                     b =>
                     {
-                        var filteredRows = b.FilterList(b.Get(model, x => x.Documents), b.Get(model, x => x.FilterText));
+                        //var filteredRows = b.FilterList(b.Get(model, x => x.Documents), b.Get(model, x => x.FilterText));
+
+                        var filteredRows = b.Get(model, x => x.Documents);
 
                         var gridBuilder = DataGridBuilder.DataGrid<T>();
 

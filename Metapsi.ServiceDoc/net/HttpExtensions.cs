@@ -67,9 +67,9 @@ namespace Metapsi
                 await docsApp.WriteInitApiResponse(docType, new Web.CfHttpResponse(httpContext.Response));
             });
 
-            groupEndpoint.MapGet("list/{docType}", async (HttpContext httpContext, string docType) =>
+            groupEndpoint.MapPost("list/{docType}", async (HttpContext httpContext, string docType) =>
             {
-                await docsApp.WriteListDocumentsApiResponse(docType, new Web.CfHttpResponse(httpContext.Response));
+                await docsApp.WriteListDocumentsApiResponse(docType, new Web.CfHttpContext(httpContext));
             });
 
             groupEndpoint.MapPost("save/{docType}", async (HttpContext httpContext, string docType) =>
