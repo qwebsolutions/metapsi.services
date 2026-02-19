@@ -92,40 +92,6 @@ public static class DocumentEditor
     }
 
 
-    //public static Var<HyperType.Effect> EditDocumentEffect<TDocument>(
-    //    this SyntaxBuilder b,
-    //    Var<TDocument> document,
-    //    Var<System.Action> then)
-    //{
-    //    return b.MakeEffect(
-    //        b =>
-    //        {
-    //            var body = b.QuerySelector("body");
-    //            var node = b.NodeAppendChild(
-    //                body,
-    //                b.CreateElement<HtmlDiv>(
-    //                    "div",
-    //                    b =>
-    //                    {
-    //                        //b.SetId("id-json-editor-app");
-    //                    })
-    //                );
-    //            b.RequestAnimationFrame(
-    //                b =>
-    //                {
-    //                    b.Hyperapp(
-    //                        b.NewObj<HyperType.App<Model>>(
-    //                            b =>
-    //                            {
-    //                                b.Set(x => x.init, b.NewObj<Model>().As<HyperType.Init>());
-    //                                //b.Set(x => x.node, b.QuerySelector("id-json-editor-app"));
-    //                                b.Set(x => x.node, node);
-    //                                b.Set(x => x.view, b.Def<LayoutBuilder, Model, IVNode>(OnRender));
-    //                            }));
-    //                });
-    //        });
-    //}
-
     private static Var<HyperType.Effect> ShutdownEffect(this SyntaxBuilder b)
     {
         return b.MakeEffect(
@@ -369,10 +335,6 @@ public static class DocumentEditor
                                 }));
                     }));
 
-                    //var json = b.JsonEditorGenerate(
-                    //        b.Get(model, x => x.RootNode),
-                    //        b.Const(0),
-                    //        b.Const(false));
                     b.SetValue(b.Get(model, x => x.RawJson));
                 }),
                 b.HtmlDiv(
