@@ -19,6 +19,7 @@ namespace Metapsi
         public class SearchInput
         {
             public string Query { get; set; } = string.Empty;
+            public int MaxResults { get; set; }
         }
 
         public class SearchResult<T>

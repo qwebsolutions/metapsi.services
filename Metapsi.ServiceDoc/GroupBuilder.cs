@@ -305,7 +305,7 @@ namespace Metapsi
                         }
                         await httpContext.Response.WriteJsonReponse(new SearchResult<T>()
                         {
-                            Items = outList,
+                            Items = outList.Take(searchInput.MaxResults).ToList(),
                             OutOfTotal = outList.Count
                         });
                     },

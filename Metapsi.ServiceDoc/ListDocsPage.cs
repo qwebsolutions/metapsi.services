@@ -13,6 +13,8 @@ namespace Metapsi;
 
 public static partial class ServiceDoc
 {
+    const int ResultsPageSize = 20;
+
     public class ListDocsPage<T>
     {
         public string InitApiUrl { get; set; }
@@ -25,7 +27,7 @@ public static partial class ServiceDoc
         public string SummaryHtml { get; set; }
         public List<string> Columns { get; set; } = new List<string>();
         public string SearchTerm { get; set; }
-        public int MaxResults { get; set; }
+        public int MaxResults { get; set; } = ResultsPageSize;
     }
 
     private const string IdEditDocument = "id-edit-document";
@@ -40,7 +42,47 @@ public static partial class ServiceDoc
             b => b.MakeInit(
                 b.MakeStateWithEffects(
                     b.Const(model),
-                    (b, dispatch) => b.Dispatch(dispatch, b.RefreshAllDocuments<T>()))),
+                    (b, dispatch) =>
+                    {
+                        var onIntersection = b.Def((SyntaxBuilder b, Var<List<IntersectionObserverEntry>> entries) =>
+                        {
+                            var first = b.Get(entries, x => x.FirstOrDefault());
+                            b.If(
+                                b.HasObject(first),
+                                b =>
+                                {
+                                    b.If(
+                                        b.Get(first, x => x.isIntersecting),
+                                        b =>
+                                        {
+                                            b.Dispatch(
+                                                dispatch,
+                                                b.MakeAction((SyntaxBuilder b, Var<ListDocsPage<T>> model) =>
+                                                {
+                                                    b.Set(model, x => x.MaxResults, b.Get(model, x => x.MaxResults + ResultsPageSize));
+                                                    return b.Call(RefreshAllDocuments<T>);
+                                                }));
+                                        });
+                                });
+                        });
+
+                        var observer = b.On(b.IntersectionObserver(),
+                            b =>
+                            {
+                                return b.New(onIntersection);
+                            });
+                        b.RequestAnimationFrame(
+                            b =>
+                            {
+                                var loadMoreSentinel = b.GetElementById("load-more-sentinel");
+                                b.If(
+                                    b.HasObject(loadMoreSentinel),
+                                    b =>
+                                    {
+                                        b.On(observer, x => x.observe(loadMoreSentinel));
+                                    });
+                            });
+                    })),
             (b, model) =>
             {
                 return b.RenderDocumentsList(model, idProperty);
@@ -90,6 +132,7 @@ public static partial class ServiceDoc
                     {
                         var filterText = b.GetTargetValue(e);
                         b.Set(model, x => x.SearchTerm, filterText);
+                        b.Set(model, x => x.MaxResults, ResultsPageSize);
                         return b.MakeStateWithEffects(
                             model,
                             b.Debounce(
@@ -509,9 +552,10 @@ public static partial class ServiceDoc
                 b.PostJsonEffect(
                     b.Get(model, x => x.ListApiUrl),
                     b.NewObj<SearchInput>(
-                        b=>
+                        b =>
                         {
                             b.Set(x => x.Query, b.Get(model, x => x.SearchTerm));
+                            b.Set(x => x.MaxResults, b.Get(model, x => x.MaxResults));
                         }),
                     onResult,
                     onError));
@@ -787,6 +831,11 @@ public static partial class ServiceDoc
                     b =>
                     {
                         return b.Text("There are no documents to display. Create some to see them here");
+                    }),
+                b.HtmlDiv(
+                    b=>
+                    {
+                        b.SetId("load-more-sentinel");
                     }));
     }
 
