@@ -78,6 +78,16 @@ public static class Program
 
         // Create db access queue
         var dbQueue = new ServiceDoc.DbQueue(new SqliteQueue(connectionString));
+
+        //Task.Run(async () =>
+        //{
+        //    await Task.Delay(TimeSpan.FromSeconds(30));
+        //    await dbQueue.SqliteQueue.Enqueue(async (c) =>
+        //    {
+        //        await Task.Delay(TimeSpan.FromSeconds(30));
+        //    });
+        //});
+
         await webApp.MapGroup("docs").UseDocs(
             dbQueue,
             b =>
