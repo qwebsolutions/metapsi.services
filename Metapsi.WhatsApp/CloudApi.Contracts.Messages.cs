@@ -674,6 +674,12 @@ public class ParameterObject
     public string type { get; set; }
 
     /// <summary>
+    /// Required if template uses body component parameters.
+    /// Name of parameter as defined in the template body component text string.
+    /// </summary>
+    public string parameter_name { get; set; }
+
+    /// <summary>
     /// Required when type=text.
     /// The message’s text.Character limit varies based on the following included component type.
     /// For the header component type:
