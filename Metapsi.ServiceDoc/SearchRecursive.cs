@@ -6,39 +6,8 @@ namespace Metapsi;
 
 public static class SearchRecursiveExtensions
 {
-    public static T SearchRecursive<T>(
-        T node,
-        Func<T, IEnumerable<T>> drill,
-        Func<T, bool> stop,
-        T defaultValue)
-    {
-        Reference<T> intoReference = new Reference<T>() { Value = defaultValue };
-        SearchRecursive(node, drill, stop, intoReference);
-        return intoReference.Value;
-    }
-
-    public static void SearchRecursive<T>(
-        T node,
-        Func<T, IEnumerable<T>> drill,
-        Func<T, bool> stop,
-        Reference<T> intoReference = null)
-    {
-        if (stop(node))
-        {
-            if (intoReference != null)
-            {
-                intoReference.Value = node;
-            }
-            return;
-        }
-        foreach (var child in drill(node))
-        {
-            SearchRecursive(child, drill, stop, intoReference);
-        }
-    }
-
     public static Var<T> SearchRecursive<T>(
-        this SyntaxBuilder b,
+        this ISyntaxBuilder b,
         Var<T> root,
         Var<Func<T, List<T>>> drill,
         Var<Func<T, bool>> match,
@@ -50,7 +19,7 @@ public static class SearchRecursiveExtensions
                 b.Set(x => x.Found, false);
                 b.Set(x => x.Result, defaultValue);
             }));
-        b.Call(SearchRecursive, root, drill, match, intoReference);
+        b.Call<ISyntaxBuilder, T, Func<T, List<T>>, Func<T, bool>, Reference<SearchResult<T>>>(SearchRecursiveExtensions.SearchRecursive, root, drill, match, intoReference);
         return b.Get(b.GetRef(intoReference), x => x.Result);
     }
 
@@ -61,7 +30,7 @@ public static class SearchRecursiveExtensions
     }
 
     private static void SearchRecursive<T>(
-        SyntaxBuilder b,
+        ISyntaxBuilder b,
         Var<T> current,
         Var<Func<T, List<T>>> drill,
         Var<Func<T, bool>> match,
@@ -83,7 +52,8 @@ public static class SearchRecursiveExtensions
                        b.Call(drill, current),
                        (b, child) =>
                        {
-                           b.Call(SearchRecursive, child, drill, match, intoReference);
+                           var sr = b.Def<ISyntaxBuilder, T, Func<T, List<T>>, Func<T, bool>, Reference<SearchResult<T>>>(SearchRecursiveExtensions.SearchRecursive);
+                           b.Call(sr, child, drill, match, intoReference);
                        });
                }));
     }

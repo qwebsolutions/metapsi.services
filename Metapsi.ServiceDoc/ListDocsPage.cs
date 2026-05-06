@@ -89,9 +89,79 @@ public static partial class ServiceDoc
             }));
     }
 
-    internal static Var<string> EntityName<T>(this SyntaxBuilder b)
+    internal static Var<string> EntityName<T>(this ISyntaxBuilder b)
     {
         return b.Const(typeof(T).Name);
+    }
+
+
+    public static Var<List<char>> Chars(this ISyntaxBuilder b, Var<string> s)
+    {
+        return b.On(b.GetClass<Metapsi.Html.Array>(), b => b.from(s).As<List<char>>());
+    }
+
+    public static Var<string> JoinChars(this ISyntaxBuilder b, Var<List<char>> s)
+    {
+        return b.On(s.As<Metapsi.Html.Array>(), b => b.join(b.Const(string.Empty)));
+    }
+
+    public static Var<char> CharToUpperCase(this ISyntaxBuilder b, Var<char> c)
+    {
+        return b.On(c, b => b.Call<char>("toUpperCase"));
+    }
+
+    public static Var<char> CharToLowerCase(this ISyntaxBuilder b, Var<char> c)
+    {
+        return b.StringToLowerCase(c.As<string>()).As<char>();
+    }
+
+    public static Var<bool> CharIsUpperCase(this ISyntaxBuilder b, Var<char> c)
+    {
+        var isUpperCase = b.AreEqual(b.CharToUpperCase(c), c);
+        var hasUpperCase = b.Not(b.AreEqual(b.CharToLowerCase(c), c));
+
+        var result = b.And(isUpperCase, hasUpperCase);
+        return result;
+    }
+
+    public static Var<int> StringLength(this ISyntaxBuilder b, Var<string> s)
+    {
+        return b.GetProperty<int>(s, "length");
+    }
+
+    public static Var<List<string>> SplitOnUppercase(this ISyntaxBuilder b, Var<string> text)
+    {
+        var outStrings = b.NewCollection<string>();
+        var currentString = b.Ref(b.NewCollection<char>());
+
+        b.Foreach(b.Chars(text), (b, c) =>
+        {
+            b.If(b.CharIsUpperCase(c),
+                b =>
+                {
+                    var joined = b.JoinChars(b.GetRef(currentString));
+                    b.If(
+                        b.Get(b.StringLength(joined), x => x > 0),
+                        b =>
+                        {
+                            b.Push(outStrings, joined);
+                        });
+                    b.SetRef(currentString, b.NewCollection<char>());
+                });
+
+            b.Push(b.GetRef(currentString), c);
+        });
+
+        b.Push(outStrings, b.JoinChars(b.GetRef(currentString)));
+
+        return outStrings;
+    }
+
+    public static Var<string> FormatLabel(this ISyntaxBuilder b, Var<string> fieldName)
+    {
+        var split = b.SplitOnUppercase(fieldName);
+        var label = b.JoinStrings(b.Const(" "), split);
+        return label;
     }
 
     public static Var<IVNode> RenderDocumentsList<T, TId>(this LayoutBuilder b, Var<ListDocsPage<T>> model, Expression<Func<T, TId>> idProperty)
@@ -209,7 +279,7 @@ public static partial class ServiceDoc
             b =>
             {
                 b.SetId(b.Const(IdRemoveDocument));
-                b.SetLabel(b.Concat(b.Const("Remove "), b.ToLowercase(b.FormatLabel(b.EntityName<T>()))));
+                b.SetLabel(b.Concat(b.Const("Remove "), b.StringToLowerCase(b.FormatLabel(b.EntityName<T>()))));
             },
             content);
     }

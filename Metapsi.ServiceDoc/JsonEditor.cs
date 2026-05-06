@@ -270,7 +270,7 @@ public static partial class JsonEditorExtensions
             });
     }
 
-    public static Var<bool> IsUndefined(this SyntaxBuilder b, Var<object> data)
+    public static Var<bool> IsUndefined(this ISyntaxBuilder b, Var<object> data)
     {
         return b.AreEqual(data, b.GetProperty<object>(b.Self(), "undefined"));
     }
