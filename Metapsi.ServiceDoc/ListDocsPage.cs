@@ -462,32 +462,16 @@ public static partial class ServiceDoc
 
     private static void AddServiceDocStylesheet(this HtmlBuilder b)
     {
-        var embeddedCss = b.Document.Metadata.AddEmbeddedResourceMetadata(typeof(Metapsi.ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
-        //StaticFiles.Add(typeof(ServiceDoc).Assembly, "Metapsi.ServiceDoc.css");
-
-        var link = new HtmlTag("link");
-        link.SetAttribute("rel", "stylesheet");
-        link.SetAttribute("href", embeddedCss);
-
-        b.HeadAppend(new HtmlNode()
+        var stylesheetPath = b.ResolvePath(new EmbeddedResource()
         {
-            Tags = new List<HtmlTag>() { link }
+            Assembly = typeof(Metapsi.ServiceDoc).Assembly,
+            LogicalName = "Metapsi.ServiceDoc.css"
+        });
+        b.Require(new StylesheetDependency()
+        {
+            StylesheetPath = stylesheetPath
         });
     }
-
-    //public static Var<List<TItem>> FilterList<TItem>(
-    //    this SyntaxBuilder b,
-    //    Var<List<TItem>> list,
-    //    Var<string> value)
-    //{
-    //    var filteredItems = b.Get(
-    //        list,
-    //        value,
-    //        b.Def<SyntaxBuilder, TItem, string, bool>(ContainsValue),
-    //        (all, value, filterFunc) => all.Where(x => filterFunc(x, value)).ToList());
-
-    //    return filteredItems;
-    //}
 
     public static Var<bool> ContainsValue<T>(this SyntaxBuilder b, Var<T> item, Var<string> value)
     {
